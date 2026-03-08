@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trends Loader</title>
+  <style>
+    :root {
+      --bg: #f7f7f2;
+      --panel: #ffffff;
+      --ink: #1f2a1f;
+      --muted: #5c6a5c;
+      --line: #d6dccf;
+      --ok: #2f7a43;
+      --warn: #c77d1a;
+      --bad: #b42318;
+      --accent: #1f7a8c;
+      --accent-soft: #d9f0f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 700px at 10% 0%, #eef5ea 0%, var(--bg) 60%);
+      color: var(--ink);
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+    .title { margin: 0 0 6px; font-size: 30px; font-weight: 700; }
+    .subtitle { margin: 0 0 22px; color: var(--muted); }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 14px rgba(29, 42, 29, 0.04);
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .row + .row { margin-top: 10px; }
+    label { font-size: 14px; color: var(--muted); }
+    input[type="text"], input[type="number"] {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      min-width: 220px;
+      background: #fff;
+      color: var(--ink);
+    }
+    input[type="number"] { width: 120px; min-width: 120px; }
+    .chipbox { display: inline-flex; gap: 10px; align-items: center; }
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      background: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    button {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 13px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+    }
+    button.secondary {
+      background: #fff;
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .progress-wrap { margin-top: 8px; }
+    .progress-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+    .bar {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      background: #edf0ea;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    .fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #5e60ce 0%, #1f7a8c 100%);
+      transition: width 0.3s ease;
+    }
+    .fill.download { background: linear-gradient(90deg, #2f7a43 0%, #88b04b 100%); }
+    .indeterminate .fill {
+      width: 40%;
+      animation: sweep 1.2s linear infinite;
+    }
+    @keyframes sweep {
+      from { transform: translateX(-120%); }
+      to { transform: translateX(320%); }
+    }
+    .status {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: var(--muted);
+      background: #fbfcfa;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 80px;
+      max-height: 190px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 8px 6px;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+    .pill.ok { background: #e8f6ec; color: var(--ok); }
+    .pill.warn { background: #fff3e3; color: var(--warn); }
+    .pill.bad { background: #feeceb; color: var(--bad); }
+    .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">Trend Video Loader</h1>
+    <p class="subtitle">Input hashtags or generate them from a topic. Search trends, then download assets with live progress.</p>
+
+    <section class="panel">
+      <div class="row">
+        <label for="topic">Topic</label>
+        <input id="topic" type="text" placeholder="health lifestyle influencer" />
+        <button id="suggestBtn" class="secondary">Suggest Hashtags</button>
+      </div>
+      <div class="row">
+        <label for="hashtags">Hashtags (comma separated)</label>
+        <input id="hashtags" type="text" style="min-width:520px" placeholder="healthylifestyle, wellness, mealprep" />
+      </div>
+      <div class="row">
+        <label>Platforms</label>
+        <div class="chipbox">
+          <label class="chip"><input id="pTikTok" type="checkbox" checked /> TikTok</label>
+          <label class="chip"><input id="pInstagram" type="checkbox" checked /> Instagram</label>
+        </div>
+        <label for="limit">Limit per platform</label>
+        <input id="limit" type="number" min="1" max="100" value="30" />
+        <button id="searchBtn">Search Videos</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="progress-wrap">
+        <div class="progress-head">
+          <strong>Search Progress</strong>
+          <span id="searchCounter">0 / 0</span>
+        </div>
+        <div id="searchBar" class="bar"><div id="searchFill" class="fill"></div></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-head">
+          <strong>Download Progress</strong>
+          <span id="downloadCounter">0 / 0</span>
+        </div>
+        <div id="downloadBar" class="bar"><div id="downloadFill" class="fill download"></div></div>
+      </div>
+      <div class="row" style="margin-top: 12px;">
+        <label for="downloadDir">Download folder</label>
+        <input id="downloadDir" type="text" style="min-width:420px" placeholder="~/Downloads/influencer_videos" />
+      </div>
+      <div class="row" style="margin-top: 8px;">
+        <button id="downloadBtn" disabled>Download Loaded Videos</button>
+      </div>
+      <div id="status" class="status" style="margin-top: 12px;">Ready.</div>
+    </section>
+
+    <section class="panel">
+      <div class="row" style="justify-content:space-between;">
+        <strong>Loaded Videos</strong>
+        <span id="runMeta" class="empty"></span>
+      </div>
+      <div id="tableWrap" class="empty">No videos loaded yet.</div>
+    </section>
+  </div>
+
+  <script>
+    const state = {
+      runId: null,
+      items: [],
+      searching: false,
+      downloading: false,
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function nowStamp() {
+      return new Date().toLocaleTimeString();
+    }
+
+    function log(msg) {
+      const box = $("status");
+      box.textContent += `\n[${nowStamp()}] ${msg}`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function parseHashtags(raw) {
+      return raw
+        .split(/[\n, ]+/)
+        .map((s) => s.trim().replace(/^#/, ""))
+        .filter(Boolean);
+    }
+
+    function suggestHashtags(topic) {
+      const txt = (topic || "").toLowerCase();
+      const common = ["healthylifestyle", "wellness", "fitness", "selfcare", "healthyhabits", "nutrition", "mealprep", "mindset"];
+      const tokenTags = (txt.match(/[a-z0-9]+/g) || [])
+        .filter((x) => x.length >= 4)
+        .slice(0, 6)
+        .map((x) => x.replace(/[^a-z0-9]/g, ""));
+      const extra = [];
+      if (txt.includes("health")) extra.push("healthtips");
+      if (txt.includes("lifestyle")) extra.push("lifestyle");
+      if (txt.includes("diet")) extra.push("diettips");
+      if (txt.includes("gym") || txt.includes("workout")) extra.push("workoutroutine");
+      if (txt.includes("sleep")) extra.push("sleephealth");
+      const uniq = [...new Set([...tokenTags, ...extra, ...common])];
+      return uniq.slice(0, 10);
+    }
+
+    function selectedPlatforms() {
+      const out = [];
+      if ($("pTikTok").checked) out.push("tiktok");
+      if ($("pInstagram").checked) out.push("instagram");
+      return out;
+    }
+
+    function setBar(barId, fillId, percent, indeterminate = false) {
+      const bar = $(barId);
+      const fill = $(fillId);
+      if (indeterminate) {
+        bar.classList.add("indeterminate");
+      } else {
+        bar.classList.remove("indeterminate");
+        fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+      }
+    }
+
+    function setButtons() {
+      $("searchBtn").disabled = state.searching || state.downloading;
+      $("suggestBtn").disabled = state.searching || state.downloading;
+      $("downloadBtn").disabled = state.searching || state.downloading || state.items.length === 0;
+    }
+
+    function renderTable() {
+      const wrap = $("tableWrap");
+      if (!state.items.length) {
+        wrap.className = "empty";
+        wrap.textContent = "No videos loaded yet.";
+        return;
+      }
+      wrap.className = "";
+      const rows = state.items.map((item, idx) => {
+        const tags = (item.hashtags || []).slice(0, 5).join(", ");
+        const cap = (item.caption || "").replace(/</g, "&lt;").slice(0, 120);
+        const link = item.video_url ? `<a href="${item.video_url}" target="_blank" rel="noreferrer">open</a>` : "-";
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${item.platform}</td>
+            <td>${link}</td>
+            <td>${item.views || 0}</td>
+            <td>${cap || "-"}</td>
+            <td>${tags || "-"}</td>
+          </tr>
+        `;
+      }).join("");
+
+      wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Platform</th>
+              <th>Video</th>
+              <th>Views</th>
+              <th>Caption</th>
+              <th>Hashtags</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    async function runSearch() {
+      const hashtags = parseHashtags($("hashtags").value);
+      const platforms = selectedPlatforms();
+      const limit = Number($("limit").value || 30);
+
+      if (!platforms.length) {
+        alert("Select at least one platform.");
+        return;
+      }
+      if (!hashtags.length) {
+        alert("Provide at least one hashtag.");
+        return;
+      }
+
+      state.searching = true;
+      setButtons();
+      state.items = [];
+      state.runId = null;
+      renderTable();
+      $("runMeta").textContent = "";
+      $("status").textContent = "Starting search...";
+
+      const expected = limit * platforms.length;
+      $("searchCounter").textContent = `0 / ${expected}`;
+      $("downloadCounter").textContent = `0 / 0`;
+      setBar("searchBar", "searchFill", 0, true);
+      setBar("downloadBar", "downloadFill", 0, false);
+
+      const selectors = {};
+      for (const p of platforms) {
+        selectors[p] = {
+          mode: "hashtag",
+          hashtags,
+        };
+      }
+
+      try {
+        const resp = await fetch("/api/v1/trends/ingest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            platforms,
+            limit_per_platform: limit,
+            source: "apify",
+            selectors,
+          }),
+        });
+
+        if (!resp.ok) {
+          const t = await resp.text();
+          throw new Error(`Search failed: ${resp.status} ${t}`);
+        }
+
+        const data = await resp.json();
+        state.runId = data.id;
+        state.items = Array.isArray(data.items) ? data.items : [];
+
+        const found = state.items.length;
+        const pct = expected ? (found / expected) * 100 : 0;
+        setBar("searchBar", "searchFill", pct, false);
+        $("searchCounter").textContent = `${found} / ${expected}`;
+        $("runMeta").textContent = `run_id=${data.id} | source=${data.source} | signals=${(data.signals || []).length}`;
+
+        renderTable();
+        log(`Search done. Found ${found} items.`);
+      } catch (err) {
+        setBar("searchBar", "searchFill", 0, false);
+        log(err.message || String(err));
+      } finally {
+        state.searching = false;
+        setButtons();
+      }
+    }
+
+    async function runDownloads() {
+      if (!state.items.length) return;
+      const downloadDir = $("downloadDir").value.trim() || null;
+
+      state.downloading = true;
+      setButtons();
+
+      const total = state.items.length;
+      let done = 0;
+      let ok = 0;
+      let failed = 0;
+      let skipped = 0;
+
+      $("downloadCounter").textContent = `0 / ${total}`;
+      setBar("downloadBar", "downloadFill", 0, false);
+      log(`Download started for ${total} items...${downloadDir ? ` folder=${downloadDir}` : ""}`);
+
+      for (const item of state.items) {
+        try {
+          const resp = await fetch(`/api/v1/trends/downloads/item/${item.id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ force: false, download_dir: downloadDir }),
+          });
+
+          if (!resp.ok) {
+            failed += 1;
+            log(`item ${item.id}: download API failed (${resp.status})`);
+          } else {
+            const payload = await resp.json();
+            if (payload.status === "downloaded") ok += 1;
+            else if (payload.status === "skipped") skipped += 1;
+            else failed += 1;
+            log(`item ${item.id}: ${payload.status}`);
+          }
+        } catch (err) {
+          failed += 1;
+          log(`item ${item.id}: ${err.message || String(err)}`);
+        }
+
+        done += 1;
+        const pct = (done / total) * 100;
+        setBar("downloadBar", "downloadFill", pct, false);
+        $("downloadCounter").textContent = `${done} / ${total}`;
+      }
+
+      log(`Download done. downloaded=${ok}, failed=${failed}, skipped=${skipped}`);
+      state.downloading = false;
+      setButtons();
+    }
+
+    $("suggestBtn").addEventListener("click", () => {
+      const tags = suggestHashtags($("topic").value);
+      $("hashtags").value = tags.join(", ");
+      log(`Suggested ${tags.length} hashtags.`);
+    });
+
+    $("searchBtn").addEventListener("click", runSearch);
+    $("downloadBtn").addEventListener("click", runDownloads);
+    setButtons();
+  </script>
+</body>
+</html>
