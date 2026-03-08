@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import math
+import random
+import time
 from datetime import datetime
 
 import requests
@@ -10,12 +12,26 @@ from app.adapters.types import RawTrendVideo, TrendFetchSelector
 
 
 class ApifyTrendAdapter:
-    def __init__(self, token: str, actor_id: str, platform: str, query: str):
+    RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
+
+    def __init__(
+        self,
+        token: str,
+        actor_id: str,
+        platform: str,
+        query: str,
+        request_retries: int = 4,
+        retry_backoff_sec: float = 1.5,
+        retry_max_backoff_sec: float = 12.0,
+    ):
         self.token = token
         self.actor_id = actor_id.replace("/", "~")
         self.platform = platform
         self.query = query
         self.base_url = "https://api.apify.com/v2"
+        self.request_retries = max(int(request_retries), 1)
+        self.retry_backoff_sec = max(float(retry_backoff_sec), 0.1)
+        self.retry_max_backoff_sec = max(float(retry_max_backoff_sec), self.retry_backoff_sec)
 
     def fetch(self, limit: int, selector: TrendFetchSelector | None = None) -> list[RawTrendVideo]:
         actor_input = self._build_actor_input(limit=limit, selector=selector)
@@ -46,8 +62,15 @@ class ApifyTrendAdapter:
         params = {"waitForFinish": 120}
         headers = {"Authorization": f"Bearer {self.token}"}
 
-        response = requests.post(endpoint, params=params, headers=headers, json=actor_input, timeout=140)
-        response.raise_for_status()
+        response = self._request_with_retry(
+            "post",
+            endpoint,
+            params=params,
+            headers=headers,
+            json=actor_input,
+            timeout=140,
+            operation=f"start actor run ({self.actor_id})",
+        )
         return response.json().get("data", {})
 
     def _read_dataset(self, dataset_id: str, limit: int) -> list[dict]:
@@ -58,12 +81,85 @@ class ApifyTrendAdapter:
             "format": "json",
         }
         headers = {"Authorization": f"Bearer {self.token}"}
-        response = requests.get(endpoint, params=params, headers=headers, timeout=60)
-        response.raise_for_status()
+        response = self._request_with_retry(
+            "get",
+            endpoint,
+            params=params,
+            headers=headers,
+            timeout=60,
+            operation=f"read dataset ({dataset_id})",
+        )
         data = response.json()
         if isinstance(data, list):
             return data
         return []
+
+    def _request_with_retry(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: dict | None = None,
+        headers: dict | None = None,
+        json: dict | None = None,
+        timeout: int = 60,
+        operation: str = "apify request",
+    ) -> requests.Response:
+        last_error: Exception | None = None
+        last_response: requests.Response | None = None
+
+        for attempt in range(1, self.request_retries + 1):
+            try:
+                response = requests.request(
+                    method=method,
+                    url=url,
+                    params=params,
+                    headers=headers,
+                    json=json,
+                    timeout=timeout,
+                )
+                if response.ok:
+                    return response
+
+                last_response = response
+                if response.status_code not in self.RETRYABLE_STATUSES:
+                    response.raise_for_status()
+
+            except (requests.ConnectionError, requests.Timeout) as exc:
+                last_error = exc
+            except requests.HTTPError as exc:
+                # Non-retryable HTTP status or final failed attempt.
+                if last_response is not None and last_response.status_code not in self.RETRYABLE_STATUSES:
+                    raise
+                last_error = exc
+            except requests.RequestException as exc:
+                last_error = exc
+
+            if attempt >= self.request_retries:
+                break
+
+            delay = min(self.retry_backoff_sec * (2 ** (attempt - 1)), self.retry_max_backoff_sec)
+            delay *= random.uniform(0.85, 1.15)
+            time.sleep(delay)
+
+        if last_response is not None:
+            try:
+                last_response.raise_for_status()
+            except requests.HTTPError as exc:
+                body = (last_response.text or "").strip()
+                snippet = body[:400] if body else ""
+                details = (
+                    f"{operation} failed after {self.request_retries} attempts: "
+                    f"HTTP {last_response.status_code}"
+                )
+                if snippet:
+                    details = f"{details}; response={snippet}"
+                raise RuntimeError(details) from exc
+        if last_error is not None:
+            raise RuntimeError(
+                f"{operation} failed after {self.request_retries} attempts: {last_error}"
+            ) from last_error
+        raise RuntimeError(f"{operation} failed after {self.request_retries} attempts")
 
     def _normalize_row(self, row: dict) -> RawTrendVideo | None:
         video_url = row.get("videoUrl") or row.get("webVideoUrl")

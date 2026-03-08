@@ -79,6 +79,18 @@ class Settings(BaseSettings):
         default=3,
         validation_alias=AliasChoices("APIFY_MAX_SELECTOR_TERMS", "apify_max_selector_terms"),
     )
+    apify_request_retries: int = Field(
+        default=4,
+        validation_alias=AliasChoices("APIFY_REQUEST_RETRIES", "apify_request_retries"),
+    )
+    apify_retry_backoff_sec: float = Field(
+        default=1.5,
+        validation_alias=AliasChoices("APIFY_RETRY_BACKOFF_SEC", "apify_retry_backoff_sec"),
+    )
+    apify_retry_max_backoff_sec: float = Field(
+        default=12.0,
+        validation_alias=AliasChoices("APIFY_RETRY_MAX_BACKOFF_SEC", "apify_retry_max_backoff_sec"),
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

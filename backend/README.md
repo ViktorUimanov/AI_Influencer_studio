@@ -148,6 +148,7 @@ curl 'http://localhost:8000/api/v1/trends/downloads?run_id=1&status=downloaded'
 - If Apify returns auth/rate errors, ingestion now fails with explicit `502` by default (instead of silently returning empty data). Set `APIFY_FALLBACK_TO_SEED=true` only if you intentionally want fallback behavior.
 - TikTok and Instagram Store actors are paid per event/result; cost grows quickly with many hashtags/search terms. The parser now caps selector terms by default (`APIFY_MAX_SELECTOR_TERMS=3`) and disables APIFY over-fetch by default (`APIFY_OVERFETCH_MULTIPLIER=1`).
 - For `clockworks/tiktok-scraper`, `resultsPerPage` is now distributed across selected hashtags/search queries so a single run stays close to your requested `limit_per_platform`.
+- Transient Apify gateway/network errors (`429/5xx`, timeouts) are retried automatically with exponential backoff (`APIFY_REQUEST_RETRIES`, `APIFY_RETRY_BACKOFF_SEC`, `APIFY_RETRY_MAX_BACKOFF_SEC`).
 - For Instagram/TikTok downloads behind auth walls, set `YT_DLP_COOKIES_FILE` to a valid cookies file.
 - Seed URLs in `backend/data/seeds/*.json` are placeholders; downloader quality tests require real URLs.
 - Some Instagram rows can still have `views=0` when upstream metadata does not expose play count; ranking prioritizes freshness + reach and de-prioritizes zero-view engagement inflation.

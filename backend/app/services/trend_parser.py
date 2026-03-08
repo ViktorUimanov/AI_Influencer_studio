@@ -274,6 +274,9 @@ class TrendParserService:
                     actor_id=actor_id,
                     platform=platform,
                     query=query,
+                    request_retries=self.settings.apify_request_retries,
+                    retry_backoff_sec=self.settings.apify_retry_backoff_sec,
+                    retry_max_backoff_sec=self.settings.apify_retry_max_backoff_sec,
                 ).fetch(limit=fetch_limit, selector=selector)
                 return self._select_top_videos(videos=videos, limit=limit)
             except Exception as exc:
