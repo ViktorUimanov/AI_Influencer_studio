@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shlex
 import shutil
 import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -57,7 +59,8 @@ class TrendDownloadService:
 
         try:
             download_info = self._run_ytdlp(url=item.video_url, platform=item.platform, download_dir=download_dir)
-            path = Path(download_info["local_path"])
+            downloaded_path = Path(download_info["local_path"])
+            path = self._rename_download_for_item(downloaded_path, item)
 
             record.status = "downloaded"
             record.local_path = str(path)
@@ -141,10 +144,8 @@ class TrendDownloadService:
 
         command_parts = shlex.split(command)
         binary = command_parts[0]
-        if shutil.which(binary) is None:
-            raise RuntimeError(
-                f"Downloader '{binary}' not found in PATH. Install yt-dlp and/or update YT_DLP_COMMAND"
-            )
+        resolved_binary = self._resolve_downloader_binary(binary)
+        command_parts[0] = resolved_binary
 
         base_dir = self._resolve_download_dir(download_dir=download_dir)
         platform_dir = base_dir / platform
@@ -217,3 +218,59 @@ class TrendDownloadService:
         if download_dir:
             return Path(download_dir).expanduser().resolve()
         return self.settings.downloads_data_dir.resolve()
+
+    def _resolve_downloader_binary(self, binary: str) -> str:
+        binary_path = Path(binary).expanduser()
+        if binary_path.is_file():
+            return str(binary_path.resolve())
+
+        resolved = shutil.which(binary)
+        if resolved:
+            return resolved
+
+        if binary == "yt-dlp":
+            # Prefer the currently running virtualenv's yt-dlp when PATH is not configured.
+            candidates = [
+                Path(sys.executable).with_name("yt-dlp"),
+                Path(sys.executable).resolve().parent / "yt-dlp",
+            ]
+            for candidate in candidates:
+                if candidate.exists():
+                    return str(candidate)
+
+        raise RuntimeError(
+            f"Downloader '{binary}' not found in PATH. Install yt-dlp and/or update YT_DLP_COMMAND"
+        )
+
+    def _rename_download_for_item(self, downloaded_path: Path, item: TrendItem) -> Path:
+        if not downloaded_path.exists():
+            raise RuntimeError(f"Downloaded file does not exist: {downloaded_path}")
+
+        suffix = downloaded_path.suffix or ".mp4"
+        target_name = self._build_item_filename(item=item, suffix=suffix)
+        if downloaded_path.name == target_name:
+            return downloaded_path
+
+        target_path = downloaded_path.with_name(target_name)
+        if target_path.exists():
+            target_path.unlink()
+        downloaded_path.rename(target_path)
+        return target_path
+
+    def _build_item_filename(self, item: TrendItem, suffix: str) -> str:
+        date_part = (
+            item.published_at.astimezone(UTC).strftime("%Y%m%d")
+            if item.published_at
+            else "unknown"
+        )
+        views_part = str(max(0, int(item.views or 0)))
+        source_uid = self._sanitize_token(item.source_item_id or "")
+        if not source_uid:
+            fallback_seed = item.video_url or f"{item.platform}-{item.id}"
+            source_uid = hashlib.sha1(fallback_seed.encode("utf-8")).hexdigest()[:12]
+
+        return f"{item.platform}_{date_part}_views{views_part}_uid{source_uid}{suffix}"
+
+    def _sanitize_token(self, raw: str, limit: int = 64) -> str:
+        token = re.sub(r"[^a-zA-Z0-9_-]+", "", str(raw or ""))
+        return token[:limit]

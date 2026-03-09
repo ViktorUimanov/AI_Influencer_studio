@@ -128,7 +128,7 @@ curl 'http://localhost:8000/api/v1/trends/items?platform=instagram&query=hooks'
 ```bash
 curl -X POST 'http://localhost:8000/api/v1/trends/downloads/run' \
   -H 'Content-Type: application/json' \
-  -d '{"run_id": 1, "platform": "tiktok", "limit": 5, "download_dir": "~/Downloads/influencer_videos"}'
+  -d '{"run_id": 1, "platform": "tiktok", "limit": 5, "download_dir": "~/Downloads/healthy_videos"}'
 
 curl 'http://localhost:8000/api/v1/trends/downloads?run_id=1&status=downloaded'
 ```
@@ -146,16 +146,26 @@ curl 'http://localhost:8000/api/v1/trends/downloads?run_id=1&status=downloaded'
 # 1) Deterministic pre-filter / ranking
 ./scripts/run_candidate_filter_pipeline.py --probe-seconds 8 --top-k 8
 
-# 2) VLM suitability scoring (real Gemini run)
+# 2) VLM suitability scoring (real Gemini run, persona-aware)
 export GEMINI_API_KEY=your_api_key
 ./scripts/run_vlm_summarizer.py \
-  --theme "health lifestyle influencer channel" \
+  --theme "healthy lifestyle channel" \
   --hashtags "wellness,healthylifestyle,mealprep" \
+  --persona-file backend/data/personas/default_persona.json \
   --max-videos 15 \
   --sync-folders
 
 # 3) Local dry-run without API (for pipeline validation)
 ./scripts/run_vlm_summarizer.py --mock --sync-folders
+
+# 4) One-command end-to-end selector pipeline (filter -> Gemini -> selected/rejected)
+./scripts/run_selector_pipeline.py \
+  --top-k 15 \
+  --theme "healthy lifestyle channel" \
+  --hashtags "wellness,fitness,nutrition"
+
+# 5) Main strict-health pipeline (parse -> download -> custom filter -> Gemini)
+./scripts/run_health_main_pipeline.py --limit 50 --top-k 20
 ```
 
 ## Notes
@@ -169,7 +179,10 @@ export GEMINI_API_KEY=your_api_key
 - Transient Apify gateway/network errors (`429/5xx`, timeouts) are retried automatically with exponential backoff (`APIFY_REQUEST_RETRIES`, `APIFY_RETRY_BACKOFF_SEC`, `APIFY_RETRY_MAX_BACKOFF_SEC`).
 - For Instagram/TikTok downloads behind auth walls, set `YT_DLP_COOKIES_FILE` to a valid cookies file.
 - VLM summarizer script (`scripts/run_vlm_summarizer.py`) reads videos from `backend/data/tmp/filtered` and writes per-video JSON outputs to `backend/data/analysis/vlm`.
+- Default persona profile lives in `backend/data/personas/default_persona.json` and is injected into Gemini prompt/scoring (`persona_fit`).
 - With `--sync-folders`, VLM decisions are synced to `backend/data/tmp/selected` and `backend/data/tmp/rejected`.
+- Candidate filter script now syncs top-K candidates into `backend/data/tmp/filtered` by default.
+- End-to-end `scripts/run_selector_pipeline.py` runs candidate filtering and VLM selection in one command.
 - Set `GEMINI_API_KEY` for real Gemini runs. Default model in script/env is `gemini-3.1-flash-lite-preview`.
 - Seed URLs in `backend/data/seeds/*.json` are placeholders; downloader quality tests require real URLs.
 - Some Instagram rows can still have `views=0` when upstream metadata does not expose play count; ranking prioritizes freshness + reach and de-prioritizes zero-view engagement inflation.

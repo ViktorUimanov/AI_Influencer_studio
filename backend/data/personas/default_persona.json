@@ -1,0 +1,42 @@
+{
+  "persona_id": "forest_health_creator_v1",
+  "name": "Mina",
+  "summary": "Young female health and lifestyle creator with a calm, friendly, outdoors-first identity. She fits wellness, mindful movement, nutrition, and daily healthy routine content.",
+  "visual_features": [
+    "young woman",
+    "dark straight hair tied back",
+    "natural clean makeup",
+    "soft smile and approachable expression",
+    "clear skin and balanced facial lighting",
+    "slim build",
+    "natural look in daylight"
+  ],
+  "style_keywords": [
+    "outdoor wellness",
+    "nature trail",
+    "earth-tone clothing",
+    "minimal aesthetic",
+    "healthy lifestyle",
+    "calm confidence"
+  ],
+  "content_preferences": [
+    "fitness and mindful movement",
+    "nutrition tips and healthy meals",
+    "daily wellness routines",
+    "walking, hiking, and outdoor habits",
+    "educational health explainers"
+  ],
+  "substitution_constraints": [
+    "prefer single dominant person in frame",
+    "face visible for meaningful portions of the video",
+    "stable camera motion and moderate scene cuts",
+    "natural body motion compatible with female fitness lifestyle persona",
+    "lighting should allow consistent face replacement"
+  ],
+  "avoid": [
+    "heavy occlusions on face",
+    "very fast montage edits",
+    "large groups where no clear main subject exists",
+    "themes unrelated to wellness or healthy lifestyle"
+  ]
+}

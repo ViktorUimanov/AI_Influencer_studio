@@ -144,7 +144,7 @@
     <section class="panel">
       <div class="row">
         <label for="topic">Topic</label>
-        <input id="topic" type="text" placeholder="health lifestyle influencer" />
+        <input id="topic" type="text" placeholder="healthy lifestyle" />
         <button id="suggestBtn" class="secondary">Suggest Hashtags</button>
       </div>
       <div class="row">
@@ -158,7 +158,7 @@
           <label class="chip"><input id="pInstagram" type="checkbox" checked /> Instagram</label>
         </div>
         <label for="limit">Limit per platform</label>
-        <input id="limit" type="number" min="1" max="100" value="30" />
+        <input id="limit" type="number" min="1" max="100" value="50" />
         <button id="searchBtn">Search Videos</button>
       </div>
     </section>
@@ -180,7 +180,7 @@
       </div>
       <div class="row" style="margin-top: 12px;">
         <label for="downloadDir">Download folder</label>
-        <input id="downloadDir" type="text" style="min-width:420px" placeholder="~/Downloads/influencer_videos" />
+        <input id="downloadDir" type="text" style="min-width:420px" placeholder="~/Downloads/healthy_videos" />
       </div>
       <div class="row" style="margin-top: 8px;">
         <button id="downloadBtn" disabled>Download Loaded Videos</button>
@@ -226,18 +226,25 @@
 
     function suggestHashtags(topic) {
       const txt = (topic || "").toLowerCase();
-      const common = ["healthylifestyle", "wellness", "fitness", "selfcare", "healthyhabits", "nutrition", "mealprep", "mindset"];
-      const tokenTags = (txt.match(/[a-z0-9]+/g) || [])
-        .filter((x) => x.length >= 4)
-        .slice(0, 6)
-        .map((x) => x.replace(/[^a-z0-9]/g, ""));
+      const common = [
+        "healthylifestyle",
+        "wellness",
+        "fitness",
+        "selfcare",
+        "healthyhabits",
+        "nutrition",
+        "mealprep",
+        "healthtips",
+        "mentalwellness",
+        "hydration"
+      ];
       const extra = [];
-      if (txt.includes("health")) extra.push("healthtips");
-      if (txt.includes("lifestyle")) extra.push("lifestyle");
       if (txt.includes("diet")) extra.push("diettips");
       if (txt.includes("gym") || txt.includes("workout")) extra.push("workoutroutine");
       if (txt.includes("sleep")) extra.push("sleephealth");
-      const uniq = [...new Set([...tokenTags, ...extra, ...common])];
+      if (txt.includes("gut")) extra.push("guthealth");
+      if (txt.includes("mind")) extra.push("mindfulliving");
+      const uniq = [...new Set([...extra, ...common])];
       return uniq.slice(0, 10);
     }
 
