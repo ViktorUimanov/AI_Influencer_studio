@@ -1,0 +1,54 @@
+{
+  "video_path": "/Users/viktor/data_science/influencer_project/backend/data/tmp/filtered/TikTok_7579763600026389815.mp4",
+  "file_name": "TikTok_7579763600026389815.mp4",
+  "model": "gemini-3.1-flash-lite-preview",
+  "generated_at": "2026-03-09T20:08:19.260545+00:00",
+  "auto_decision": "reject",
+  "thresholds": {
+    "min_readiness": 7.0,
+    "min_confidence": 0.7,
+    "max_occlusion_risk": 6.0,
+    "max_scene_cut_complexity": 6.0
+  },
+  "model_output": {
+    "summary": "The video features a single subject performing various morning routine activities. While the subject is generally clear, there are several segments with significant motion, camera movement, and occlusion (e.g., walking, turning away, dog interaction) that would make high-quality AI face replacement challenging.",
+    "scores": {
+      "theme_match": 10,
+      "single_subject_clarity": 8,
+      "face_visibility": 7,
+      "motion_stability": 5,
+      "occlusion_risk": 6,
+      "scene_cut_complexity": 7,
+      "substitution_readiness": 6
+    },
+    "decision": "maybe",
+    "confidence": 0.8,
+    "reasons": [
+      "The subject is the clear focus throughout the video.",
+      "There are frequent camera movements and rapid scene changes that complicate stable AI replacement.",
+      "Several shots involve the subject turning away from the camera or being partially obscured, increasing the risk of artifacts.",
+      "The theme is a perfect match for an AI health influencer."
+    ],
+    "best_segments": [
+      {
+        "start_sec": 0.19,
+        "end_sec": 0.24,
+        "why": "The subject is sitting relatively still, facing the camera, with good lighting and minimal occlusion."
+      },
+      {
+        "start_sec": 1.03,
+        "end_sec": 1.09,
+        "why": "The subject is in a static position (driving), providing a clear, stable view of the face for replacement."
+      }
+    ]
+  },
+  "model_raw_text": "{\n  \"summary\": \"The video features a single subject performing various morning routine activities. While the subject is generally clear, there are several segments with significant motion, camera movement, and occlusion (e.g., walking, turning away, dog interaction) that would make high-quality AI face replacement challenging.\",\n  \"scores\": {\n    \"theme_match\": 10,\n    \"single_subject_clarity\": 8,\n    \"face_visibility\": 7,\n    \"motion_stability\": 5,\n    \"occlusion_risk\": 6,\n    \"scene_cut_complexity\": 7,\n    \"substitution_readiness\": 6\n  },\n  \"decision\": \"maybe\",\n  \"confidence\": 0.8,\n  \"reasons\": [\n    \"The subject is the clear focus throughout the video.\",\n    \"There are frequent camera movements and rapid scene changes that complicate stable AI replacement.\",\n    \"Several shots involve the subject turning away from the camera or being partially obscured, increasing the risk of artifacts.\",\n    \"The theme is a perfect match for an AI health influencer.\"\n  ],\n  \"best_segments\": [\n    {\n      \"start_sec\": 0.19,\n      \"end_sec\": 0.24,\n      \"why\": \"The subject is sitting relatively still, facing the camera, with good lighting and minimal occlusion.\"\n    },\n    {\n      \"start_sec\": 1.03,\n      \"end_sec\": 1.09,\n      \"why\": \"The subject is in a static position (driving), providing a clear, stable view of the face for replacement.\"\n    }\n  ]\n}",
+  "reasons": [
+    "low_substitution_readiness",
+    "high_scene_cut_complexity",
+    "The subject is the clear focus throughout the video.",
+    "There are frequent camera movements and rapid scene changes that complicate stable AI replacement.",
+    "Several shots involve the subject turning away from the camera or being partially obscured, increasing the risk of artifacts.",
+    "The theme is a perfect match for an AI health influencer."
+  ]
+}

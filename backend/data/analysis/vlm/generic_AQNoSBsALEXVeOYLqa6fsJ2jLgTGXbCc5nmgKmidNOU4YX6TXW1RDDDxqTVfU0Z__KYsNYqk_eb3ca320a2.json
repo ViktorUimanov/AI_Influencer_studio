@@ -1,0 +1,45 @@
+{
+  "video_path": "/Users/viktor/data_science/influencer_project/backend/data/tmp/filtered/generic_AQNoSBsALEXVeOYLqa6fsJ2jLgTGXbCc5nmgKmidNOU4YX6TXW1RDDDxqTVfU0Z__KYsNYqkdSBKwtlXjAOl1xr2.mp4strext=1__nc_cat=106__nc_sid=5e9851__nc_ht=scontent-vie1-1.cdninstagram.mp4",
+  "file_name": "generic_AQNoSBsALEXVeOYLqa6fsJ2jLgTGXbCc5nmgKmidNOU4YX6TXW1RDDDxqTVfU0Z__KYsNYqkdSBKwtlXjAOl1xr2.mp4strext=1__nc_cat=106__nc_sid=5e9851__nc_ht=scontent-vie1-1.cdninstagram.mp4",
+  "model": "gemini-3.1-flash-lite-preview",
+  "generated_at": "2026-03-09T20:08:55.534400+00:00",
+  "auto_decision": "reject",
+  "thresholds": {
+    "min_readiness": 7.0,
+    "min_confidence": 0.7,
+    "max_occlusion_risk": 6.0,
+    "max_scene_cut_complexity": 6.0
+  },
+  "model_output": {
+    "summary": "The video features a fitness influencer posing in a gym. The subject is seen from the back for most of the clip, with only a brief moment of face visibility at the end.",
+    "scores": {
+      "theme_match": 10,
+      "single_subject_clarity": 8,
+      "face_visibility": 2,
+      "motion_stability": 9,
+      "occlusion_risk": 2,
+      "scene_cut_complexity": 1,
+      "substitution_readiness": 3
+    },
+    "decision": "reject",
+    "confidence": 0.9,
+    "reasons": [
+      "The subject's face is not visible for the majority of the video, making face replacement impossible for most of the clip.",
+      "The video is primarily a back-pose showcase, which does not provide enough facial data for a consistent AI replacement."
+    ],
+    "best_segments": [
+      {
+        "start_sec": 13.5,
+        "end_sec": 16.0,
+        "why": "This is the only segment where the subject's face is clearly visible and facing the camera."
+      }
+    ]
+  },
+  "model_raw_text": "{\n  \"summary\": \"The video features a fitness influencer posing in a gym. The subject is seen from the back for most of the clip, with only a brief moment of face visibility at the end.\",\n  \"scores\": {\n    \"theme_match\": 10,\n    \"single_subject_clarity\": 8,\n    \"face_visibility\": 2,\n    \"motion_stability\": 9,\n    \"occlusion_risk\": 2,\n    \"scene_cut_complexity\": 1,\n    \"substitution_readiness\": 3\n  },\n  \"decision\": \"reject\",\n  \"confidence\": 0.9,\n  \"reasons\": [\n    \"The subject's face is not visible for the majority of the video, making face replacement impossible for most of the clip.\",\n    \"The video is primarily a back-pose showcase, which does not provide enough facial data for a consistent AI replacement.\"\n  ],\n  \"best_segments\": [\n    {\n      \"start_sec\": 13.5,\n      \"end_sec\": 16.0,\n      \"why\": \"This is the only segment where the subject's face is clearly visible and facing the camera.\"\n    }\n  ]\n}",
+  "reasons": [
+    "low_substitution_readiness",
+    "model_rejected",
+    "The subject's face is not visible for the majority of the video, making face replacement impossible for most of the clip.",
+    "The video is primarily a back-pose showcase, which does not provide enough facial data for a consistent AI replacement."
+  ]
+}

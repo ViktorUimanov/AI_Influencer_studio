@@ -1,0 +1,47 @@
+{
+  "video_path": "/Users/viktor/data_science/influencer_project/backend/data/tmp/filtered/generic_AQOZcLv4McjEAGqElibXM23Bd6KY2kaSpNpL8QDXbyZUPYuW6tTyKrm_Vtx3-RURmm0CK1oLpxp18qbQge2OAJe6-iKhlEx8RQImGZU.mp4_nc_cat=105__nc_sid=5e9851__nc_ht=scontent-vie1-1.cdninstagram.mp4",
+  "file_name": "generic_AQOZcLv4McjEAGqElibXM23Bd6KY2kaSpNpL8QDXbyZUPYuW6tTyKrm_Vtx3-RURmm0CK1oLpxp18qbQge2OAJe6-iKhlEx8RQImGZU.mp4_nc_cat=105__nc_sid=5e9851__nc_ht=scontent-vie1-1.cdninstagram.mp4",
+  "model": "gemini-3.1-flash-lite-preview",
+  "generated_at": "2026-03-09T20:09:07.603669+00:00",
+  "auto_decision": "accept",
+  "thresholds": {
+    "min_readiness": 7.0,
+    "min_confidence": 0.7,
+    "max_occlusion_risk": 6.0,
+    "max_scene_cut_complexity": 6.0
+  },
+  "model_output": {
+    "summary": "The video features a single subject speaking directly to the camera in a gym setting, making it highly suitable for AI face replacement.",
+    "scores": {
+      "theme_match": 10,
+      "single_subject_clarity": 10,
+      "face_visibility": 10,
+      "motion_stability": 9,
+      "occlusion_risk": 1,
+      "scene_cut_complexity": 1,
+      "substitution_readiness": 10
+    },
+    "decision": "accept",
+    "confidence": 1.0,
+    "reasons": [
+      "The subject is clearly framed and centered throughout the video.",
+      "The background is static and simple, minimizing potential artifacts.",
+      "There is minimal head movement and no significant occlusions.",
+      "The video is a single continuous shot with no complex cuts."
+    ],
+    "best_segments": [
+      {
+        "start_sec": 0.0,
+        "end_sec": 51.0,
+        "why": "The entire video is a single, stable, and well-lit shot of the subject, making it perfect for AI substitution."
+      }
+    ]
+  },
+  "model_raw_text": "{\n  \"summary\": \"The video features a single subject speaking directly to the camera in a gym setting, making it highly suitable for AI face replacement.\",\n  \"scores\": {\n    \"theme_match\": 10,\n    \"single_subject_clarity\": 10,\n    \"face_visibility\": 10,\n    \"motion_stability\": 9,\n    \"occlusion_risk\": 1,\n    \"scene_cut_complexity\": 1,\n    \"substitution_readiness\": 10\n  },\n  \"decision\": \"accept\",\n  \"confidence\": 1.0,\n  \"reasons\": [\n    \"The subject is clearly framed and centered throughout the video.\",\n    \"The background is static and simple, minimizing potential artifacts.\",\n    \"There is minimal head movement and no significant occlusions.\",\n    \"The video is a single continuous shot with no complex cuts.\"\n  ],\n  \"best_segments\": [\n    {\n      \"start_sec\": 0.0,\n      \"end_sec\": 51.0,\n      \"why\": \"The entire video is a single, stable, and well-lit shot of the subject, making it perfect for AI substitution.\"\n    }\n  ]\n}",
+  "reasons": [
+    "The subject is clearly framed and centered throughout the video.",
+    "The background is static and simple, minimizing potential artifacts.",
+    "There is minimal head movement and no significant occlusions.",
+    "The video is a single continuous shot with no complex cuts."
+  ]
+}

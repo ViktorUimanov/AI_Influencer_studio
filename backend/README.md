@@ -140,6 +140,24 @@ curl 'http://localhost:8000/api/v1/trends/downloads?run_id=1&status=downloaded'
 ./scripts/demo_downloads.sh 1
 ```
 
+9. Candidate filtering + VLM summarizer:
+
+```bash
+# 1) Deterministic pre-filter / ranking
+./scripts/run_candidate_filter_pipeline.py --probe-seconds 8 --top-k 8
+
+# 2) VLM suitability scoring (real Gemini run)
+export GEMINI_API_KEY=your_api_key
+./scripts/run_vlm_summarizer.py \
+  --theme "health lifestyle influencer channel" \
+  --hashtags "wellness,healthylifestyle,mealprep" \
+  --max-videos 15 \
+  --sync-folders
+
+# 3) Local dry-run without API (for pipeline validation)
+./scripts/run_vlm_summarizer.py --mock --sync-folders
+```
+
 ## Notes
 
 - Default source is `seed` to ensure parser works without external credentials.
@@ -150,6 +168,9 @@ curl 'http://localhost:8000/api/v1/trends/downloads?run_id=1&status=downloaded'
 - For `clockworks/tiktok-scraper`, `resultsPerPage` is now distributed across selected hashtags/search queries so a single run stays close to your requested `limit_per_platform`.
 - Transient Apify gateway/network errors (`429/5xx`, timeouts) are retried automatically with exponential backoff (`APIFY_REQUEST_RETRIES`, `APIFY_RETRY_BACKOFF_SEC`, `APIFY_RETRY_MAX_BACKOFF_SEC`).
 - For Instagram/TikTok downloads behind auth walls, set `YT_DLP_COOKIES_FILE` to a valid cookies file.
+- VLM summarizer script (`scripts/run_vlm_summarizer.py`) reads videos from `backend/data/tmp/filtered` and writes per-video JSON outputs to `backend/data/analysis/vlm`.
+- With `--sync-folders`, VLM decisions are synced to `backend/data/tmp/selected` and `backend/data/tmp/rejected`.
+- Set `GEMINI_API_KEY` for real Gemini runs. Default model in script/env is `gemini-3.1-flash-lite-preview`.
 - Seed URLs in `backend/data/seeds/*.json` are placeholders; downloader quality tests require real URLs.
 - Some Instagram rows can still have `views=0` when upstream metadata does not expose play count; ranking prioritizes freshness + reach and de-prioritizes zero-view engagement inflation.
 - IG sidecar carousel posts can include videos inside `childPosts`; the adapter now extracts those nested videos as separate items.

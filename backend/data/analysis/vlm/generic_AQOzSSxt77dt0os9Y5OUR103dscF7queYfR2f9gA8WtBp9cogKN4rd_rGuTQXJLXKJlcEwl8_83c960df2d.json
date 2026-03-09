@@ -1,0 +1,47 @@
+{
+  "video_path": "/Users/viktor/data_science/influencer_project/backend/data/tmp/filtered/generic_AQOzSSxt77dt0os9Y5OUR103dscF7queYfR2f9gA8WtBp9cogKN4rd_rGuTQXJLXKJlcEwl8R0utPmeM3rrocFes.mp4strext=1__nc_cat=105__nc_sid=5e9851__nc_ht=scontent-vie1-1.cdninstagram.mp4",
+  "file_name": "generic_AQOzSSxt77dt0os9Y5OUR103dscF7queYfR2f9gA8WtBp9cogKN4rd_rGuTQXJLXKJlcEwl8R0utPmeM3rrocFes.mp4strext=1__nc_cat=105__nc_sid=5e9851__nc_ht=scontent-vie1-1.cdninstagram.mp4",
+  "model": "gemini-3.1-flash-lite-preview",
+  "generated_at": "2026-03-09T20:09:36.257824+00:00",
+  "auto_decision": "accept",
+  "thresholds": {
+    "min_readiness": 7.0,
+    "min_confidence": 0.7,
+    "max_occlusion_risk": 6.0,
+    "max_scene_cut_complexity": 6.0
+  },
+  "model_output": {
+    "summary": "The video features a single subject performing a static stretching exercise while looking at a phone. The face is clearly visible and stable throughout the clip, making it highly suitable for AI face replacement.",
+    "scores": {
+      "theme_match": 10,
+      "single_subject_clarity": 10,
+      "face_visibility": 9,
+      "motion_stability": 10,
+      "occlusion_risk": 1,
+      "scene_cut_complexity": 1,
+      "substitution_readiness": 10
+    },
+    "decision": "accept",
+    "confidence": 1.0,
+    "reasons": [
+      "The subject is stationary, which is ideal for AI face replacement.",
+      "The face is clearly visible and not obstructed by hair or accessories.",
+      "There is only one person in the frame.",
+      "The lighting is consistent and clear."
+    ],
+    "best_segments": [
+      {
+        "start_sec": 0.0,
+        "end_sec": 18.0,
+        "why": "The entire clip is a single, stable shot with the subject's face clearly visible and in a fixed position."
+      }
+    ]
+  },
+  "model_raw_text": "{\n  \"summary\": \"The video features a single subject performing a static stretching exercise while looking at a phone. The face is clearly visible and stable throughout the clip, making it highly suitable for AI face replacement.\",\n  \"scores\": {\n    \"theme_match\": 10,\n    \"single_subject_clarity\": 10,\n    \"face_visibility\": 9,\n    \"motion_stability\": 10,\n    \"occlusion_risk\": 1,\n    \"scene_cut_complexity\": 1,\n    \"substitution_readiness\": 10\n  },\n  \"decision\": \"accept\",\n  \"confidence\": 1.0,\n  \"reasons\": [\n    \"The subject is stationary, which is ideal for AI face replacement.\",\n    \"The face is clearly visible and not obstructed by hair or accessories.\",\n    \"There is only one person in the frame.\",\n    \"The lighting is consistent and clear.\"\n  ],\n  \"best_segments\": [\n    {\n      \"start_sec\": 0.0,\n      \"end_sec\": 18.0,\n      \"why\": \"The entire clip is a single, stable shot with the subject's face clearly visible and in a fixed position.\"\n    }\n  ]\n}",
+  "reasons": [
+    "The subject is stationary, which is ideal for AI face replacement.",
+    "The face is clearly visible and not obstructed by hair or accessories.",
+    "There is only one person in the frame.",
+    "The lighting is consistent and clear."
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "video_path": "/Users/viktor/data_science/influencer_project/backend/data/tmp/filtered/TikTok_7538873757004238093.mp4",
+  "file_name": "TikTok_7538873757004238093.mp4",
+  "model": "gemini-3.1-flash-lite-preview",
+  "generated_at": "2026-03-09T20:07:53.975040+00:00",
+  "auto_decision": "accept",
+  "thresholds": {
+    "min_readiness": 7.0,
+    "min_confidence": 0.7,
+    "max_occlusion_risk": 6.0,
+    "max_scene_cut_complexity": 6.0
+  },
+  "model_output": {
+    "summary": "The video features a single subject demonstrating a recipe in a kitchen setting. The subject is well-lit, centered, and maintains consistent eye contact with the camera, making it highly suitable for AI face replacement.",
+    "scores": {
+      "theme_match": 10,
+      "single_subject_clarity": 9,
+      "face_visibility": 10,
+      "motion_stability": 9,
+      "occlusion_risk": 2,
+      "scene_cut_complexity": 2,
+      "substitution_readiness": 9
+    },
+    "decision": "accept",
+    "confidence": 0.95,
+    "reasons": [
+      "The subject is clearly visible and centered throughout the video.",
+      "The lighting is consistent and flattering, which is ideal for AI face replacement.",
+      "The subject's movements are relatively stable, minimizing motion blur.",
+      "There is minimal occlusion, with the subject's face remaining unobstructed for the majority of the clip."
+    ],
+    "best_segments": [
+      {
+        "start_sec": 0.0,
+        "end_sec": 35.0,
+        "why": "The entire video is well-suited for replacement as the subject remains in a consistent position with clear face visibility throughout."
+      }
+    ]
+  },
+  "model_raw_text": "{\n  \"summary\": \"The video features a single subject demonstrating a recipe in a kitchen setting. The subject is well-lit, centered, and maintains consistent eye contact with the camera, making it highly suitable for AI face replacement.\",\n  \"scores\": {\n    \"theme_match\": 10,\n    \"single_subject_clarity\": 9,\n    \"face_visibility\": 10,\n    \"motion_stability\": 9,\n    \"occlusion_risk\": 2,\n    \"scene_cut_complexity\": 2,\n    \"substitution_readiness\": 9\n  },\n  \"decision\": \"accept\",\n  \"confidence\": 0.95,\n  \"reasons\": [\n    \"The subject is clearly visible and centered throughout the video.\",\n    \"The lighting is consistent and flattering, which is ideal for AI face replacement.\",\n    \"The subject's movements are relatively stable, minimizing motion blur.\",\n    \"There is minimal occlusion, with the subject's face remaining unobstructed for the majority of the clip.\"\n  ],\n  \"best_segments\": [\n    {\n      \"start_sec\": 0.0,\n      \"end_sec\": 35.0,\n      \"why\": \"The entire video is well-suited for replacement as the subject remains in a consistent position with clear face visibility throughout.\"\n    }\n  ]\n}",
+  "reasons": [
+    "The subject is clearly visible and centered throughout the video.",
+    "The lighting is consistent and flattering, which is ideal for AI face replacement.",
+    "The subject's movements are relatively stable, minimizing motion blur.",
+    "There is minimal occlusion, with the subject's face remaining unobstructed for the majority of the clip."
+  ]
+}

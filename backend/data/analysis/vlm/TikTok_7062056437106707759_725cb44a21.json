@@ -1,0 +1,41 @@
+{
+  "video_path": "/Users/viktor/data_science/influencer_project/backend/data/tmp/filtered/TikTok_7062056437106707759.mp4",
+  "file_name": "TikTok_7062056437106707759.mp4",
+  "model": "gemini-3.1-flash-lite-preview",
+  "generated_at": "2026-03-09T20:07:07.482001+00:00",
+  "auto_decision": "reject",
+  "thresholds": {
+    "min_readiness": 7.0,
+    "min_confidence": 0.7,
+    "max_occlusion_risk": 6.0,
+    "max_scene_cut_complexity": 6.0
+  },
+  "model_output": {
+    "summary": "The video features two individuals running on treadmills simultaneously, which violates the single-subject requirement for AI face replacement.",
+    "scores": {
+      "theme_match": 9,
+      "single_subject_clarity": 1,
+      "face_visibility": 8,
+      "motion_stability": 6,
+      "occlusion_risk": 3,
+      "scene_cut_complexity": 1,
+      "substitution_readiness": 1
+    },
+    "decision": "reject",
+    "confidence": 0.95,
+    "reasons": [
+      "Multiple dominant subjects in the frame make it impossible to isolate a single person for replacement.",
+      "The presence of two people performing the same action creates a conflict for AI face swapping tools.",
+      "The video does not meet the single-subject clarity requirement."
+    ],
+    "best_segments": []
+  },
+  "model_raw_text": "{\n  \"summary\": \"The video features two individuals running on treadmills simultaneously, which violates the single-subject requirement for AI face replacement.\",\n  \"scores\": {\n    \"theme_match\": 9,\n    \"single_subject_clarity\": 1,\n    \"face_visibility\": 8,\n    \"motion_stability\": 6,\n    \"occlusion_risk\": 3,\n    \"scene_cut_complexity\": 1,\n    \"substitution_readiness\": 1\n  },\n  \"decision\": \"reject\",\n  \"confidence\": 0.95,\n  \"reasons\": [\n    \"Multiple dominant subjects in the frame make it impossible to isolate a single person for replacement.\",\n    \"The presence of two people performing the same action creates a conflict for AI face swapping tools.\",\n    \"The video does not meet the single-subject clarity requirement.\"\n  ],\n  \"best_segments\": []\n}",
+  "reasons": [
+    "low_substitution_readiness",
+    "model_rejected",
+    "Multiple dominant subjects in the frame make it impossible to isolate a single person for replacement.",
+    "The presence of two people performing the same action creates a conflict for AI face swapping tools.",
+    "The video does not meet the single-subject clarity requirement."
+  ]
+}

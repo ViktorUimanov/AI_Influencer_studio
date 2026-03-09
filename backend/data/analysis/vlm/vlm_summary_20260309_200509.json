@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-03-09T20:05:09.381237+00:00",
+  "model": "gemini-3.1-flash-lite-preview",
+  "mock": false,
+  "input_dir": "backend/data/tmp/filtered",
+  "output_dir": "backend/data/analysis/vlm",
+  "sync_folders": true,
+  "selected_dir": "backend/data/tmp/selected",
+  "rejected_dir": "backend/data/tmp/rejected",
+  "total": 15,
+  "accepted": 0,
+  "rejected": 15,
+  "accepted_top": []
+}

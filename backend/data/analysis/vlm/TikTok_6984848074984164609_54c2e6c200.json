@@ -1,0 +1,51 @@
+{
+  "video_path": "/Users/viktor/data_science/influencer_project/backend/data/tmp/filtered/TikTok_6984848074984164609.mp4",
+  "file_name": "TikTok_6984848074984164609.mp4",
+  "model": "gemini-3.1-flash-lite-preview",
+  "generated_at": "2026-03-09T20:06:59.034506+00:00",
+  "auto_decision": "reject",
+  "thresholds": {
+    "min_readiness": 7.0,
+    "min_confidence": 0.7,
+    "max_occlusion_risk": 6.0,
+    "max_scene_cut_complexity": 6.0
+  },
+  "model_output": {
+    "summary": "The video features a health influencer demonstrating water intake, but it contains significant motion blur, rapid camera movement, and occlusions (water pouring over the face), making it unsuitable for high-quality AI face replacement.",
+    "scores": {
+      "theme_match": 9,
+      "single_subject_clarity": 8,
+      "face_visibility": 5,
+      "motion_stability": 3,
+      "occlusion_risk": 8,
+      "scene_cut_complexity": 7,
+      "substitution_readiness": 3
+    },
+    "decision": "reject",
+    "confidence": 0.9,
+    "reasons": [
+      "High motion blur during the jumping sequence makes face tracking unreliable.",
+      "Significant occlusion occurs when water is poured over the subject's face.",
+      "Rapid camera movements and cuts create instability for AI face mapping.",
+      "The subject's face is frequently partially obscured by objects or hair."
+    ],
+    "best_segments": [
+      {
+        "start_sec": 0.0,
+        "end_sec": 0.4,
+        "why": "The subject is facing the camera directly with minimal movement, providing the best opportunity for initial face mapping."
+      }
+    ]
+  },
+  "model_raw_text": "{\n  \"summary\": \"The video features a health influencer demonstrating water intake, but it contains significant motion blur, rapid camera movement, and occlusions (water pouring over the face), making it unsuitable for high-quality AI face replacement.\",\n  \"scores\": {\n    \"theme_match\": 9,\n    \"single_subject_clarity\": 8,\n    \"face_visibility\": 5,\n    \"motion_stability\": 3,\n    \"occlusion_risk\": 8,\n    \"scene_cut_complexity\": 7,\n    \"substitution_readiness\": 3\n  },\n  \"decision\": \"reject\",\n  \"confidence\": 0.9,\n  \"reasons\": [\n    \"High motion blur during the jumping sequence makes face tracking unreliable.\",\n    \"Significant occlusion occurs when water is poured over the subject's face.\",\n    \"Rapid camera movements and cuts create instability for AI face mapping.\",\n    \"The subject's face is frequently partially obscured by objects or hair.\"\n  ],\n  \"best_segments\": [\n    {\n      \"start_sec\": 0.0,\n      \"end_sec\": 0.4,\n      \"why\": \"The subject is facing the camera directly with minimal movement, providing the best opportunity for initial face mapping.\"\n    }\n  ]\n}",
+  "reasons": [
+    "low_substitution_readiness",
+    "high_occlusion_risk",
+    "high_scene_cut_complexity",
+    "model_rejected",
+    "High motion blur during the jumping sequence makes face tracking unreliable.",
+    "Significant occlusion occurs when water is poured over the subject's face.",
+    "Rapid camera movements and cuts create instability for AI face mapping.",
+    "The subject's face is frequently partially obscured by objects or hair."
+  ]
+}
