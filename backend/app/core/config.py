@@ -142,6 +142,14 @@ class Settings(BaseSettings):
     def downloads_data_dir(self) -> Path:
         return Path(__file__).resolve().parents[2] / "data" / "downloads"
 
+    @property
+    def influencers_data_dir(self) -> Path:
+        return Path(__file__).resolve().parents[2] / "data" / "influencers"
+
+    @property
+    def pipeline_runs_data_dir(self) -> Path:
+        return Path(__file__).resolve().parents[2] / "data" / "pipeline_runs"
+
 
 @lru_cache
 def get_settings() -> Settings:

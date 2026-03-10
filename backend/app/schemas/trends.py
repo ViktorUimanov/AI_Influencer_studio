@@ -18,6 +18,7 @@ class IngestTrendsRequest(BaseModel):
     platforms: list[str] = Field(default_factory=lambda: ["tiktok", "instagram"])
     limit_per_platform: int = Field(default=20, ge=1, le=200)
     source: str | None = Field(default=None, pattern="^(seed|apify|tiktok_custom|instagram_custom)$")
+    sources: dict[str, str] = Field(default_factory=dict)
     selectors: dict[str, TrendSelectorIn] = Field(default_factory=dict)
 
 

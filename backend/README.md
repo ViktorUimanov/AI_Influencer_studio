@@ -114,7 +114,95 @@ curl -X POST 'http://localhost:8000/api/v1/trends/ingest' \
 Note: for `clockworks/tiktok-scraper`, the adapter uses your `limit_per_platform` as the total budget and spreads `resultsPerPage` across selected hashtags/search queries.
 For `apify/instagram-scraper`, the adapter defaults to `resultsType: "reels"` (video-only).
 
-6. Inspect run:
+Per-platform source selection is also supported on the API:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/trends/ingest' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "platforms": ["tiktok", "instagram"],
+    "limit_per_platform": 20,
+    "sources": {
+      "tiktok": "tiktok_custom",
+      "instagram": "apify"
+    },
+    "selectors": {
+      "tiktok": {"mode": "hashtag", "hashtags": ["dancechallenge"]},
+      "instagram": {"mode": "hashtag", "hashtags": ["dance"]}
+    }
+  }'
+```
+
+6. Onboard an influencer first:
+
+If an influencer does not have a reference image, description, and hashtags in the database yet, the pipeline API returns an onboarding-required error (`409`).
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/influencers/onboarding' \
+  -F 'influencer_id=mina-main' \
+  -F 'name=Mina' \
+  -F 'description=Young female dance and lifestyle creator with clean natural look and confident solo performance style.' \
+  -F 'hashtags=dance,dancing,choreography,dancechallenge' \
+  -F 'reference_image=@/absolute/path/to/reference.jpg'
+```
+
+Inspect influencer records:
+
+```bash
+curl 'http://localhost:8000/api/v1/influencers'
+curl 'http://localhost:8000/api/v1/influencers/mina-main'
+```
+
+7. Run the configurable API pipeline:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/pipeline/run' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "influencer_id": "mina-main",
+    "platforms": {
+      "tiktok": {
+        "enabled": true,
+        "source": "tiktok_custom",
+        "limit": 30,
+        "selector": {
+          "mode": "mixed",
+          "hashtags": ["dancechallenge", "choreography"],
+          "search_terms": ["solo dance", "dance tutorial"],
+          "published_within_days": 45
+        }
+      },
+      "instagram": {
+        "enabled": true,
+        "source": "apify",
+        "limit": 30,
+        "selector": {
+          "mode": "mixed",
+          "hashtags": ["dance", "dancechallenge"],
+          "published_within_days": 45,
+          "source_params": {"resultsType": "reels"}
+        }
+      }
+    },
+    "download": {"enabled": true, "force": false},
+    "filter": {"enabled": true, "probe_seconds": 8, "workers": 4, "top_k": 15},
+    "vlm": {
+      "enabled": true,
+      "theme": "dance creator channel",
+      "model": "gemini-3.1-flash-lite-preview",
+      "max_videos": 15,
+      "thresholds": {
+        "min_readiness": 7.0,
+        "min_confidence": 0.7,
+        "min_persona_fit": 6.5,
+        "max_occlusion_risk": 6.0,
+        "max_scene_cut_complexity": 6.0
+      }
+    }
+  }'
+```
+
+8. Inspect run:
 
 ```bash
 curl 'http://localhost:8000/api/v1/trends/runs'
@@ -125,7 +213,7 @@ curl 'http://localhost:8000/api/v1/trends/items?platform=tiktok&hashtag=tutorial
 curl 'http://localhost:8000/api/v1/trends/items?platform=instagram&query=hooks'
 ```
 
-7. Download assets for a run:
+9. Download assets for a run:
 
 ```bash
 curl -X POST 'http://localhost:8000/api/v1/trends/downloads/run' \
@@ -135,14 +223,14 @@ curl -X POST 'http://localhost:8000/api/v1/trends/downloads/run' \
 curl 'http://localhost:8000/api/v1/trends/downloads?run_id=1&status=downloaded'
 ```
 
-8. Optional one-shot demo:
+10. Optional one-shot demo:
 
 ```bash
 ./scripts/demo_ingest.sh
 ./scripts/demo_downloads.sh 1
 ```
 
-9. Candidate filtering + VLM summarizer:
+11. Candidate filtering + VLM summarizer:
 
 ```bash
 # 1) Deterministic pre-filter / ranking
@@ -232,3 +320,26 @@ export GEMINI_API_KEY=your_api_key
 - Some Instagram rows can still have `views=0` when upstream metadata does not expose play count; ranking prioritizes freshness + reach and de-prioritizes zero-view engagement inflation.
 - IG sidecar carousel posts can include videos inside `childPosts`; the adapter now extracts those nested videos as separate items.
 - ComfyUI and Telegram are intentionally out of scope at this stage and can be integrated later through separate modules.
+
+## VPS launch
+
+For a simple VPS bootstrap, use the one-command launcher:
+
+```bash
+cd backend
+./scripts/launch_vps.sh
+```
+
+What it does:
+
+- starts Postgres with `docker compose up -d postgres`
+- creates `.venv` if needed
+- installs Python dependencies
+- starts `uvicorn` on `0.0.0.0:${PORT:-8000}`
+
+Recommended VPS flow:
+
+1. Clone the repo.
+2. Create `backend/.env`.
+3. Run `./scripts/launch_vps.sh`.
+4. Put Nginx or Caddy in front of `:8000` if you want HTTPS/public access.

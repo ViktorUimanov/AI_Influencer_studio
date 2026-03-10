@@ -73,6 +73,7 @@ class TrendParserService:
         platforms: list[str],
         limit_per_platform: int,
         source: str | None = None,
+        sources_by_platform: dict[str, str] | None = None,
         selectors: dict[str, dict] | None = None,
     ) -> TrendRun:
         platforms_normalized: list[str] = []
@@ -88,10 +89,20 @@ class TrendParserService:
         source_strategy = (source or self.settings.default_source).lower().strip()
         if source_strategy not in VALID_SOURCES:
             raise ValueError("Unsupported source. Use seed, apify, tiktok_custom, or instagram_custom.")
+        sources_by_platform = {str(k).lower(): str(v).lower() for k, v in (sources_by_platform or {}).items()}
+        invalid_sources = [value for value in sources_by_platform.values() if value not in VALID_SOURCES]
+        if invalid_sources:
+            raise ValueError("Unsupported per-platform source. Use seed, apify, tiktok_custom, or instagram_custom.")
         selectors = selectors or {}
+        run_source = source_strategy
+        if sources_by_platform:
+            unique_sources = {sources_by_platform.get(platform, source_strategy) for platform in platforms_normalized}
+            if len(unique_sources) > 1:
+                run_source = "mixed"
+
         run = TrendRun(
             status="running",
-            source=source_strategy,
+            source=run_source,
             platforms=platforms_normalized,
             selector_config=selectors,
         )
@@ -103,10 +114,11 @@ class TrendParserService:
             platform_videos: dict[str, list[RawTrendVideo]] = {}
             for platform in platforms_normalized:
                 selector = TrendFetchSelector(**(selectors.get(platform) or {}))
+                platform_source = sources_by_platform.get(platform, source_strategy)
                 videos = self._fetch_videos(
                     platform=platform,
                     limit=limit_per_platform,
-                    source=source_strategy,
+                    source=platform_source,
                     selector=selector,
                 )
                 platform_videos[platform] = videos

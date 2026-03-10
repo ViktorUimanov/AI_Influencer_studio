@@ -1,3 +1,5 @@
+from app.api.influencers import router as influencers_router
+from app.api.pipeline import router as pipeline_router
 from fastapi import FastAPI
 
 from app.api.trends import router as trends_router
@@ -23,4 +25,6 @@ def health() -> dict:
 
 
 app.include_router(trends_router)
+app.include_router(influencers_router)
+app.include_router(pipeline_router)
 app.include_router(ui_router)

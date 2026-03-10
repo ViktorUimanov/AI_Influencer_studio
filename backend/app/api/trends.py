@@ -31,6 +31,7 @@ def ingest_trends(
             platforms=request.platforms,
             limit_per_platform=request.limit_per_platform,
             source=request.source,
+            sources_by_platform={k.lower(): v for k, v in request.sources.items()},
             selectors={k.lower(): v.model_dump() for k, v in request.selectors.items()},
         )
     except ValueError as exc:
