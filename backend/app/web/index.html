@@ -248,6 +248,15 @@
       return uniq.slice(0, 10);
     }
 
+    function topicSearchTerms(topic) {
+      const base = (topic || "").trim().toLowerCase();
+      const defaults = ["healthy lifestyle", "wellness routine", "nutrition tips"];
+      const terms = [];
+      if (base) terms.push(base);
+      terms.push(...defaults);
+      return [...new Set(terms)].slice(0, 3);
+    }
+
     function selectedPlatforms() {
       const out = [];
       if ($("pTikTok").checked) out.push("tiktok");
@@ -342,12 +351,21 @@
       setBar("downloadBar", "downloadFill", 0, false);
 
       const selectors = {};
+      const searchTerms = topicSearchTerms($("topic").value);
       for (const p of platforms) {
         selectors[p] = {
-          mode: "hashtag",
+          mode: "mixed",
           hashtags,
+          search_terms: searchTerms,
+          published_within_days: 45,
+          require_topic_match: true,
         };
+        if (p === "tiktok") selectors[p].min_views = 10000;
+        if (p === "instagram") selectors[p].min_likes = 500;
       }
+      let source = "apify";
+      if (platforms.length === 1 && platforms[0] === "tiktok") source = "tiktok_custom";
+      if (platforms.length === 1 && platforms[0] === "instagram") source = "instagram_custom";
 
       try {
         const resp = await fetch("/api/v1/trends/ingest", {
@@ -356,7 +374,7 @@
           body: JSON.stringify({
             platforms,
             limit_per_platform: limit,
-            source: "apify",
+            source,
             selectors,
           }),
         });

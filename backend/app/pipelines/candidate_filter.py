@@ -413,11 +413,11 @@ def _analyze_candidate(item: Candidate, probe_seconds: int) -> dict:
 
 def run_candidate_filter(config: CandidateFilterConfig) -> tuple[dict, Path]:
     started = time.perf_counter()
-    candidates = load_candidates_from_db(config.db_path)
-    source = "database"
+    candidates = scan_download_dir(config.download_dir)
+    source = "filesystem"
     if not candidates:
-        candidates = scan_download_dir(config.download_dir)
-        source = "filesystem"
+        candidates = load_candidates_from_db(config.db_path)
+        source = "database"
 
     if not candidates:
         raise RuntimeError("no downloaded videos found")

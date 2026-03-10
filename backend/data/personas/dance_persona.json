@@ -1,0 +1,44 @@
+{
+  "persona_id": "mina_dance_creator_v1",
+  "name": "Mina",
+  "summary": "Young female dance creator with a confident, expressive, performance-first identity. She fits solo choreography, dance tutorials, rehearsal clips, mirror practice, and stylish short-form dance content.",
+  "visual_features": [
+    "young woman",
+    "dark straight hair tied back",
+    "natural clean makeup",
+    "soft smile and approachable expression",
+    "clear skin and balanced facial lighting",
+    "slim build",
+    "natural look in daylight"
+  ],
+  "style_keywords": [
+    "dance creator",
+    "solo choreography",
+    "studio rehearsal",
+    "mirror practice",
+    "street dance",
+    "clean athletic styling",
+    "confident expressive movement"
+  ],
+  "content_preferences": [
+    "solo dance performances",
+    "dance tutorials and repeatable choreography",
+    "practice sessions with clear body visibility",
+    "short-form trend dances with one main subject",
+    "movement-focused creator content"
+  ],
+  "substitution_constraints": [
+    "prefer one clearly dominant performer in frame",
+    "face should be visible for meaningful portions of the clip",
+    "upper body or full body should stay visible for choreography continuity",
+    "camera motion and scene cuts should still allow stable replacement",
+    "lighting should keep facial structure readable during movement"
+  ],
+  "avoid": [
+    "large crews or partner dance where no clear main subject exists",
+    "helmets, masks, or heavy face occlusion",
+    "extreme strobe lighting or rapid montage edits",
+    "contact-heavy choreography that hides the subject",
+    "themes far from dance, movement, or performance content"
+  ]
+}

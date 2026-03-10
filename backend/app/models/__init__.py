@@ -1,3 +1,3 @@
-from app.models.trends import TrendDownload, TrendItem, TrendRun, TrendSignal
+from app.models.trends import PersonaRecord, TrendDownload, TrendItem, TrendRun, TrendSignal
 
-__all__ = ["TrendRun", "TrendItem", "TrendSignal", "TrendDownload"]
+__all__ = ["TrendRun", "TrendItem", "TrendSignal", "TrendDownload", "PersonaRecord"]

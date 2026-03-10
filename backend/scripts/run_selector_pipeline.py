@@ -12,11 +12,14 @@ if str(BACKEND_ROOT) not in sys.path:
 from app.pipelines import (
     SelectorRunConfig,
     SelectorThresholds,
-    load_persona,
     parse_hashtags,
+    resolve_persona,
     resolve_project_path,
     run_selector,
 )
+from app.db.base import Base
+from app.db.migrations import run_prototype_migrations
+from app.db.session import SessionLocal, engine
 from app.pipelines.candidate_filter import CandidateFilterConfig, run_candidate_filter
 
 
@@ -38,6 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--theme", default="healthy lifestyle channel")
     parser.add_argument("--hashtags", default="")
     parser.add_argument("--persona-file", default="backend/data/personas/default_persona.json")
+    parser.add_argument("--persona-id", default="")
     parser.add_argument("--no-persona", action="store_true")
 
     parser.add_argument("--model", default="gemini-3.1-flash-lite-preview")
@@ -75,7 +79,20 @@ def main() -> int:
 
     persona = None
     if not args.no_persona:
-        persona = load_persona(resolve_project_path(args.persona_file))
+        Base.metadata.create_all(bind=engine)
+        run_prototype_migrations(engine)
+        persona_path = resolve_project_path(args.persona_file) if args.persona_file else None
+        db = SessionLocal()
+        try:
+            persona = resolve_persona(
+                db=db,
+                persona_id=args.persona_id,
+                persona_path=persona_path,
+                prefer_db=True,
+                sync_file_to_db=True,
+            )
+        finally:
+            db.close()
 
     selector_config = SelectorRunConfig(
         input_dir=filter_config.filtered_dir,

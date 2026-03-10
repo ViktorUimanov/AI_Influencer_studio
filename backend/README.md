@@ -7,6 +7,8 @@ FastAPI backend for trend ingestion and summarization, focused on TikTok + Insta
 - Trend ingestion pipeline for `tiktok` and `instagram`
 - Instagram ingestion currently stores only video/reel posts (photo parsing can be enabled later)
 - Adapter layer with source strategy:
+  - `tiktok_custom` (local `TikTokApi`, no Apify)
+  - `instagram_custom` (local `instaloader`, no Apify)
   - `apify` (if configured)
   - `seed` fallback (local sample data)
 - Persistent job tracking in Postgres:
@@ -152,6 +154,7 @@ export GEMINI_API_KEY=your_api_key
   --theme "healthy lifestyle channel" \
   --hashtags "wellness,healthylifestyle,mealprep" \
   --persona-file backend/data/personas/default_persona.json \
+  --persona-id forest_health_creator_v1 \
   --max-videos 15 \
   --sync-folders
 
@@ -162,27 +165,68 @@ export GEMINI_API_KEY=your_api_key
 ./scripts/run_selector_pipeline.py \
   --top-k 15 \
   --theme "healthy lifestyle channel" \
-  --hashtags "wellness,fitness,nutrition"
+  --hashtags "wellness,fitness,nutrition" \
+  --persona-id forest_health_creator_v1
 
-# 5) Main strict-health pipeline (parse -> download -> custom filter -> Gemini)
-./scripts/run_health_main_pipeline.py --limit 50 --top-k 20
+# 5) Main health pipeline (TikTok + Instagram, topic-focused + recent, then custom filter -> Gemini)
+./scripts/run_health_main_pipeline.py \
+  --source tiktok_custom \
+  --platforms "tiktok" \
+  --topic "healthy lifestyle" \
+  --persona-id forest_health_creator_v1 \
+  --recent-days 45 \
+  --limit 50 \
+  --top-k 20
+
+# Relax strict topic filtering if ingestion returns too few candidates
+./scripts/run_health_main_pipeline.py --no-strict-topic-match --limit 50
+
+# Cross-platform run (uses Apify adapters)
+./scripts/run_health_main_pipeline.py --source apify --platforms "tiktok,instagram" --limit 50
+
+# Custom topic/hashtags run
+./scripts/run_health_main_pipeline.py \
+  --source tiktok_custom \
+  --platforms "tiktok" \
+  --topic "dance" \
+  --hashtags "dance,dancing,choreography,dancetrend,dancechallenge" \
+  --search-terms "dance,dancing,dance trend"
+
+# Disable Apify cost-optimized mode for a broader (and usually more expensive) scrape
+./scripts/run_health_main_pipeline.py --source apify --no-apify-cost-optimized --limit 50
+
+# Instagram-only custom parser (no Apify)
+./scripts/run_health_main_pipeline.py --source instagram_custom --platforms "instagram" --limit 50
 ```
 
 ## Notes
 
-- Default source is `seed` to ensure parser works without external credentials.
-- To use Apify, set `DEFAULT_SOURCE=apify` and provide token + actor IDs in `.env`.
+- `source=tiktok_custom` uses local `TikTokApi` sessions (no Apify) and is TikTok-only.
+- `source=instagram_custom` uses local `instaloader` hashtag parsing (no Apify) and is Instagram-only.
+- `source=apify` supports TikTok + Instagram with actor IDs from `.env`.
+- `source=seed` is deterministic local test data.
 - Actor IDs can be provided as either `owner/actor` or `owner~actor`; the adapter normalizes both.
 - If Apify returns auth/rate errors, ingestion now fails with explicit `502` by default (instead of silently returning empty data). Set `APIFY_FALLBACK_TO_SEED=true` only if you intentionally want fallback behavior.
-- TikTok and Instagram Store actors are paid per event/result; cost grows quickly with many hashtags/search terms. The parser now caps selector terms by default (`APIFY_MAX_SELECTOR_TERMS=3`) and disables APIFY over-fetch by default (`APIFY_OVERFETCH_MULTIPLIER=1`).
+- TikTok and Instagram Store actors are paid per event/result; cost grows quickly with many hashtags/search terms.
+- Apify cost optimization is enabled by default (`APIFY_COST_OPTIMIZED=true`) and caps selector terms (`APIFY_MAX_SELECTOR_TERMS=1`) while keeping APIFY over-fetch disabled (`APIFY_OVERFETCH_MULTIPLIER=1`).
+- Apify cost optimization is optional: set `APIFY_COST_OPTIMIZED=false` or run with `--no-apify-cost-optimized`.
 - For `clockworks/tiktok-scraper`, `resultsPerPage` is now distributed across selected hashtags/search queries so a single run stays close to your requested `limit_per_platform`.
 - Transient Apify gateway/network errors (`429/5xx`, timeouts) are retried automatically with exponential backoff (`APIFY_REQUEST_RETRIES`, `APIFY_RETRY_BACKOFF_SEC`, `APIFY_RETRY_MAX_BACKOFF_SEC`).
 - For Instagram/TikTok downloads behind auth walls, set `YT_DLP_COOKIES_FILE` to a valid cookies file.
 - VLM summarizer script (`scripts/run_vlm_summarizer.py`) reads videos from `backend/data/tmp/filtered` and writes per-video JSON outputs to `backend/data/analysis/vlm`.
 - Default persona profile lives in `backend/data/personas/default_persona.json` and is injected into Gemini prompt/scoring (`persona_fit`).
+- Persona access is centralized: pipelines can load by `--persona-id` from the `personas` table, with JSON file fallback via `--persona-file`.
+- When a persona file is provided, the resolver can sync it into the DB automatically so later pipeline stages can fetch the same persona by ID.
 - With `--sync-folders`, VLM decisions are synced to `backend/data/tmp/selected` and `backend/data/tmp/rejected`.
 - Candidate filter script now syncs top-K candidates into `backend/data/tmp/filtered` by default.
 - End-to-end `scripts/run_selector_pipeline.py` runs candidate filtering and VLM selection in one command.
+- `scripts/run_health_main_pipeline.py` supports both TikTok and Instagram with shared hashtag/topic selectors.
+- `scripts/run_health_main_pipeline.py` accepts `--hashtags` and `--search-terms` to override the default topic preset.
+- For tighter topical relevance, selectors support `published_within_days` and `require_topic_match`.
+- For `tiktok_custom`, optionally set `TIKTOK_MS_TOKENS` (comma-separated) for more stable sessions.
+- First-time custom source setup requires `playwright install chromium`.
+- For `instagram_custom`, optional auth settings are `INSTAGRAM_CUSTOM_USERNAME`, `INSTAGRAM_CUSTOM_PASSWORD`, and `INSTAGRAM_CUSTOM_SESSION_FILE`.
+- Instagram frequently returns `login_required` for hashtag endpoints; in practice, `instagram_custom` usually needs auth/session configured.
 - Set `GEMINI_API_KEY` for real Gemini runs. Default model in script/env is `gemini-3.1-flash-lite-preview`.
 - Seed URLs in `backend/data/seeds/*.json` are placeholders; downloader quality tests require real URLs.
 - Some Instagram rows can still have `views=0` when upstream metadata does not expose play count; ranking prioritizes freshness + reach and de-prioritizes zero-view engagement inflation.

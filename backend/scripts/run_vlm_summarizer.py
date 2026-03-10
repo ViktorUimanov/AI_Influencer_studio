@@ -12,11 +12,14 @@ if str(BACKEND_ROOT) not in sys.path:
 from app.pipelines import (
     SelectorRunConfig,
     SelectorThresholds,
-    load_persona,
     parse_hashtags,
+    resolve_persona,
     resolve_project_path,
     run_selector,
 )
+from app.db.base import Base
+from app.db.migrations import run_prototype_migrations
+from app.db.session import SessionLocal, engine
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--theme", default="healthy lifestyle channel")
     parser.add_argument("--hashtags", default="")
     parser.add_argument("--persona-file", default="backend/data/personas/default_persona.json")
+    parser.add_argument("--persona-id", default="")
     parser.add_argument("--max-videos", type=int, default=15)
 
     parser.add_argument("--model", default="gemini-3.1-flash-lite-preview")
@@ -52,9 +56,21 @@ def parse_args() -> argparse.Namespace:
 
 def run(args: argparse.Namespace) -> int:
     persona = None
-    if not args.no_persona and args.persona_file:
-        persona_path = resolve_project_path(args.persona_file)
-        persona = load_persona(persona_path)
+    if not args.no_persona and (args.persona_file or args.persona_id):
+        Base.metadata.create_all(bind=engine)
+        run_prototype_migrations(engine)
+        persona_path = resolve_project_path(args.persona_file) if args.persona_file else None
+        db = SessionLocal()
+        try:
+            persona = resolve_persona(
+                db=db,
+                persona_id=args.persona_id,
+                persona_path=persona_path,
+                prefer_db=True,
+                sync_file_to_db=True,
+            )
+        finally:
+            db.close()
 
     config = SelectorRunConfig(
         input_dir=resolve_project_path(args.input_dir),

@@ -16,7 +16,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DATABASE_URL", "database_url"),
     )
 
-    # Source strategy: seed | apify
+    # Source strategy: seed | apify | tiktok_custom | instagram_custom
     default_source: str = Field(
         default="seed",
         validation_alias=AliasChoices("DEFAULT_SOURCE", "default_source"),
@@ -38,9 +38,45 @@ class Settings(BaseSettings):
         default="viral videos",
         validation_alias=AliasChoices("TIKTOK_QUERY", "tiktok_query"),
     )
+    tiktok_ms_tokens: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TIKTOK_MS_TOKENS", "tiktok_ms_tokens"),
+    )
+    tiktok_custom_headless: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("TIKTOK_CUSTOM_HEADLESS", "tiktok_custom_headless"),
+    )
+    tiktok_custom_sessions: int = Field(
+        default=1,
+        validation_alias=AliasChoices("TIKTOK_CUSTOM_SESSIONS", "tiktok_custom_sessions"),
+    )
+    tiktok_custom_sleep_after: int = Field(
+        default=3,
+        validation_alias=AliasChoices("TIKTOK_CUSTOM_SLEEP_AFTER", "tiktok_custom_sleep_after"),
+    )
+    tiktok_custom_browser: str = Field(
+        default="chromium",
+        validation_alias=AliasChoices("TIKTOK_CUSTOM_BROWSER", "tiktok_custom_browser"),
+    )
     instagram_query: str = Field(
         default="reels trends",
         validation_alias=AliasChoices("INSTAGRAM_QUERY", "instagram_query"),
+    )
+    instagram_custom_username: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("INSTAGRAM_CUSTOM_USERNAME", "instagram_custom_username"),
+    )
+    instagram_custom_password: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("INSTAGRAM_CUSTOM_PASSWORD", "instagram_custom_password"),
+    )
+    instagram_custom_session_file: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("INSTAGRAM_CUSTOM_SESSION_FILE", "instagram_custom_session_file"),
+    )
+    instagram_custom_max_posts_per_tag: int = Field(
+        default=120,
+        validation_alias=AliasChoices("INSTAGRAM_CUSTOM_MAX_POSTS_PER_TAG", "instagram_custom_max_posts_per_tag"),
     )
 
     yt_dlp_command: str = Field(
@@ -75,8 +111,12 @@ class Settings(BaseSettings):
         default=1,
         validation_alias=AliasChoices("APIFY_OVERFETCH_MULTIPLIER", "apify_overfetch_multiplier"),
     )
+    apify_cost_optimized: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("APIFY_COST_OPTIMIZED", "apify_cost_optimized"),
+    )
     apify_max_selector_terms: int = Field(
-        default=3,
+        default=1,
         validation_alias=AliasChoices("APIFY_MAX_SELECTOR_TERMS", "apify_max_selector_terms"),
     )
     apify_request_retries: int = Field(

@@ -9,13 +9,15 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.adapters.apify_source import ApifyTrendAdapter
+from app.adapters.instagram_custom_source import InstagramCustomAdapter
 from app.adapters.seed_source import SeedTrendAdapter
+from app.adapters.tiktok_custom_source import TikTokCustomAdapter
 from app.adapters.types import RawTrendVideo, TrendFetchSelector
 from app.core.config import Settings
 from app.models import TrendItem, TrendRun, TrendSignal
 
 VALID_PLATFORMS = {"tiktok", "instagram"}
-VALID_SOURCES = {"seed", "apify"}
+VALID_SOURCES = {"seed", "apify", "tiktok_custom", "instagram_custom"}
 
 STOPWORDS = {
     "the",
@@ -85,7 +87,7 @@ class TrendParserService:
 
         source_strategy = (source or self.settings.default_source).lower().strip()
         if source_strategy not in VALID_SOURCES:
-            raise ValueError("Unsupported source. Use seed or apify.")
+            raise ValueError("Unsupported source. Use seed, apify, tiktok_custom, or instagram_custom.")
         selectors = selectors or {}
         run = TrendRun(
             status="running",
@@ -248,14 +250,14 @@ class TrendParserService:
         source: str,
         selector: TrendFetchSelector | None = None,
     ) -> list[RawTrendVideo]:
-        selector = self._optimize_selector(selector)
+        selector = self._optimize_selector(selector, source=source)
         fetch_limit = limit
         if source == "seed":
             videos = SeedTrendAdapter(platform=platform, seed_dir=self.settings.seed_data_dir).fetch(
                 limit=limit,
                 selector=selector,
             )
-            return self._select_top_videos(videos=videos, limit=limit)
+            return self._select_top_videos(videos=videos, limit=limit, selector=selector)
 
         if source == "apify":
             # Over-fetch then rank to improve relevance (fresh + high-view videos).
@@ -278,23 +280,50 @@ class TrendParserService:
                     retry_backoff_sec=self.settings.apify_retry_backoff_sec,
                     retry_max_backoff_sec=self.settings.apify_retry_max_backoff_sec,
                 ).fetch(limit=fetch_limit, selector=selector)
-                return self._select_top_videos(videos=videos, limit=limit)
+                return self._select_top_videos(videos=videos, limit=limit, selector=selector)
             except Exception as exc:
                 if self.settings.apify_fallback_to_seed:
                     videos = SeedTrendAdapter(platform=platform, seed_dir=self.settings.seed_data_dir).fetch(
                         limit=limit,
                         selector=selector,
                     )
-                    return self._select_top_videos(videos=videos, limit=limit)
+                    return self._select_top_videos(videos=videos, limit=limit, selector=selector)
                 raise RuntimeError(f"Apify fetch failed for platform={platform}: {exc}") from exc
+
+        if source == "tiktok_custom":
+            if platform != "tiktok":
+                raise RuntimeError("source=tiktok_custom supports only platform=tiktok.")
+            videos = TikTokCustomAdapter(
+                query=self.settings.tiktok_query,
+                ms_tokens_csv=self.settings.tiktok_ms_tokens,
+                headless=self.settings.tiktok_custom_headless,
+                session_count=self.settings.tiktok_custom_sessions,
+                sleep_after=self.settings.tiktok_custom_sleep_after,
+                browser=self.settings.tiktok_custom_browser,
+            ).fetch(limit=limit, selector=selector)
+            return self._select_top_videos(videos=videos, limit=limit, selector=selector)
+
+        if source == "instagram_custom":
+            if platform != "instagram":
+                raise RuntimeError("source=instagram_custom supports only platform=instagram.")
+            videos = InstagramCustomAdapter(
+                query=self.settings.instagram_query,
+                username=self.settings.instagram_custom_username,
+                password=self.settings.instagram_custom_password,
+                session_file=self.settings.instagram_custom_session_file,
+                max_posts_per_tag=self.settings.instagram_custom_max_posts_per_tag,
+            ).fetch(limit=limit, selector=selector)
+            return self._select_top_videos(videos=videos, limit=limit, selector=selector)
 
         videos = SeedTrendAdapter(platform=platform, seed_dir=self.settings.seed_data_dir).fetch(
             limit=limit,
             selector=selector,
         )
-        return self._select_top_videos(videos=videos, limit=limit)
+        return self._select_top_videos(videos=videos, limit=limit, selector=selector)
 
-    def _optimize_selector(self, selector: TrendFetchSelector | None) -> TrendFetchSelector | None:
+    def _optimize_selector(
+        self, selector: TrendFetchSelector | None, source: str
+    ) -> TrendFetchSelector | None:
         if selector is None:
             return None
 
@@ -315,9 +344,11 @@ class TrendParserService:
         hashtags = _clean(selector.hashtags)
         search_terms = _clean(selector.search_terms)
 
-        max_terms = max(int(self.settings.apify_max_selector_terms), 1)
-        hashtags = hashtags[:max_terms]
-        search_terms = search_terms[:max_terms]
+        # Keep Apify runs cost-efficient by capping selector terms; don't cap local/custom sources.
+        if source == "apify" and self.settings.apify_cost_optimized:
+            max_terms = max(int(self.settings.apify_max_selector_terms), 1)
+            hashtags = hashtags[:max_terms]
+            search_terms = search_terms[:max_terms]
 
         return TrendFetchSelector(
             mode=selector.mode,
@@ -325,21 +356,29 @@ class TrendParserService:
             hashtags=hashtags,
             min_views=selector.min_views,
             min_likes=selector.min_likes,
+            published_within_days=selector.published_within_days,
+            require_topic_match=bool(selector.require_topic_match),
             source_params=selector.source_params,
         )
 
     def _score(self, video: RawTrendVideo) -> float:
         interactions = video.likes + video.comments + video.shares
-        engagement = (interactions / video.views) if video.views > 0 else 0.0
+        # IG metadata can have missing/zero views; use interaction-based proxy to keep ranking usable.
+        reach_proxy = max(
+            video.views,
+            (video.likes * 25) + (video.comments * 40) + (video.shares * 60),
+        )
+        reach_component = math.log(reach_proxy + 1, 10)
+        engagement = interactions / max(reach_proxy, 1)
 
-        recency_boost = 0.3
+        recency_boost = 0.15
         if video.published_at:
             published_utc = self._to_utc(video.published_at)
-            hours_old = max((datetime.now(UTC) - published_utc).total_seconds() / 3600, 1)
-            recency_boost = max(0.05, 1 / math.log(hours_old + 3, 10))
+            days_old = max((datetime.now(UTC) - published_utc).total_seconds() / 86_400, 0.0)
+            # Half-life ~= 21 days: favors recent videos while still allowing standout evergreen winners.
+            recency_boost = max(0.03, math.exp(-(days_old / 21.0)))
 
-        reach_component = math.log(video.views + 1, 10)
-        return round((reach_component * 0.65) + (engagement * 1.0) + (recency_boost * 0.9), 4)
+        return round((reach_component * 0.58) + (engagement * 1.15) + (recency_boost * 1.45), 4)
 
     def _extract_signals(self, platform_videos: dict[str, list[RawTrendVideo]]) -> list[dict]:
         signals: list[dict] = []
@@ -446,10 +485,63 @@ class TrendParserService:
             return 0.0
         return self._to_utc(published_at).timestamp()
 
-    def _select_top_videos(self, videos: list[RawTrendVideo], limit: int) -> list[RawTrendVideo]:
+    def _normalize_term(self, text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (text or "").lower())).strip()
+
+    def _selector_terms(self, selector: TrendFetchSelector | None) -> tuple[list[str], list[str]]:
+        if selector is None:
+            return [], []
+        hashtags = [self._normalize_term(tag.lstrip("#")) for tag in selector.hashtags]
+        hashtags = [tag for tag in hashtags if tag]
+        search_terms = [self._normalize_term(term) for term in selector.search_terms]
+        search_terms = [term for term in search_terms if term]
+        return hashtags, search_terms
+
+    def _topic_match_score(self, video: RawTrendVideo, selector: TrendFetchSelector | None) -> int:
+        hashtags, search_terms = self._selector_terms(selector)
+        if not hashtags and not search_terms:
+            return 0
+
+        tags = {self._normalize_term(tag.lstrip("#")) for tag in (video.hashtags or []) if str(tag).strip()}
+        tags.discard("")
+        text = self._normalize_term(f"{video.caption or ''} {' '.join(video.hashtags or [])}")
+
+        score = 0
+        for tag in hashtags:
+            if tag in tags:
+                score += 3
+            elif tag in text:
+                score += 2
+        for term in search_terms:
+            if term in text:
+                score += 2
+        return score
+
+    def _apply_selector_focus(
+        self, videos: list[RawTrendVideo], selector: TrendFetchSelector | None
+    ) -> list[RawTrendVideo]:
+        if selector is None:
+            return videos
+
+        hashtags, search_terms = self._selector_terms(selector)
+        if not hashtags and not search_terms:
+            return videos
+
+        matched = [video for video in videos if self._topic_match_score(video, selector) > 0]
+        if matched:
+            return matched
+        if selector.require_topic_match:
+            return []
+        return videos
+
+    def _select_top_videos(
+        self, videos: list[RawTrendVideo], limit: int, selector: TrendFetchSelector | None = None
+    ) -> list[RawTrendVideo]:
+        focused = self._apply_selector_focus(videos, selector)
         ranked = sorted(
-            videos,
+            focused,
             key=lambda video: (
+                self._topic_match_score(video, selector),
                 self._score(video),
                 video.views,
                 self._published_rank_value(video.published_at),

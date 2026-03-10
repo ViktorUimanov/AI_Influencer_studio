@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import random
 import time
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 import requests
 from dateutil import parser
@@ -409,15 +409,30 @@ class ApifyTrendAdapter:
 
         min_views = selector.min_views
         min_likes = selector.min_likes
-        if min_views is None and min_likes is None:
+        published_within_days = selector.published_within_days
+        if min_views is None and min_likes is None and published_within_days is None:
             return videos
 
         filtered: list[RawTrendVideo] = []
+        recent_cutoff = None
+        if published_within_days is not None:
+            recent_cutoff = datetime.now(UTC) - timedelta(days=max(1, int(published_within_days)))
+
         for video in videos:
             if min_views is not None and video.views < min_views:
                 continue
             if min_likes is not None and video.likes < min_likes:
                 continue
+            if recent_cutoff is not None:
+                if video.published_at is None:
+                    continue
+                published_at = video.published_at
+                if published_at.tzinfo is None:
+                    published_at = published_at.replace(tzinfo=UTC)
+                else:
+                    published_at = published_at.astimezone(UTC)
+                if published_at < recent_cutoff:
+                    continue
             filtered.append(video)
         return filtered
 

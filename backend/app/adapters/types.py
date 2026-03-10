@@ -29,4 +29,6 @@ class TrendFetchSelector(BaseModel):
     hashtags: list[str] = Field(default_factory=list)
     min_views: int | None = None
     min_likes: int | None = None
+    published_within_days: int | None = None
+    require_topic_match: bool = False
     source_params: dict | None = None

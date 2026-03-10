@@ -9,13 +9,15 @@ class TrendSelectorIn(BaseModel):
     hashtags: list[str] = Field(default_factory=list)
     min_views: int | None = Field(default=None, ge=0)
     min_likes: int | None = Field(default=None, ge=0)
+    published_within_days: int | None = Field(default=None, ge=1, le=3650)
+    require_topic_match: bool = False
     source_params: dict | None = None
 
 
 class IngestTrendsRequest(BaseModel):
     platforms: list[str] = Field(default_factory=lambda: ["tiktok", "instagram"])
     limit_per_platform: int = Field(default=20, ge=1, le=200)
-    source: str | None = Field(default=None, pattern="^(seed|apify)$")
+    source: str | None = Field(default=None, pattern="^(seed|apify|tiktok_custom|instagram_custom)$")
     selectors: dict[str, TrendSelectorIn] = Field(default_factory=dict)
 
 

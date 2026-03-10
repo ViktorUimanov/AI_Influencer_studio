@@ -4,6 +4,11 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models import PersonaRecord
+
 
 @dataclass(slots=True)
 class PersonaProfile:
@@ -75,6 +80,64 @@ def load_persona(persona_path: Path | None) -> PersonaProfile | None:
     if not isinstance(payload, dict):
         raise ValueError(f"Persona file must contain a JSON object: {persona_path}")
     return PersonaProfile.from_dict(payload)
+
+
+def load_persona_from_db(db: Session, persona_id: str) -> PersonaProfile | None:
+    normalized_id = str(persona_id or "").strip()
+    if not normalized_id:
+        return None
+    stmt = select(PersonaRecord).where(PersonaRecord.persona_id == normalized_id).limit(1)
+    record = db.execute(stmt).scalar_one_or_none()
+    if record is None:
+        return None
+    payload = record.payload or {}
+    if not isinstance(payload, dict):
+        raise ValueError(f"Persona payload must be a JSON object for persona_id={normalized_id}")
+    return PersonaProfile.from_dict(payload)
+
+
+def save_persona_to_db(db: Session, persona: PersonaProfile, source_path: Path | None = None) -> PersonaRecord:
+    stmt = select(PersonaRecord).where(PersonaRecord.persona_id == persona.persona_id).limit(1)
+    record = db.execute(stmt).scalar_one_or_none()
+    if record is None:
+        record = PersonaRecord(
+            persona_id=persona.persona_id,
+            name=persona.name,
+            payload=persona.to_dict(),
+            source_path=str(source_path) if source_path else None,
+        )
+        db.add(record)
+    else:
+        record.name = persona.name
+        record.payload = persona.to_dict()
+        record.source_path = str(source_path) if source_path else record.source_path
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def resolve_persona(
+    *,
+    db: Session | None = None,
+    persona_id: str | None = None,
+    persona_path: Path | None = None,
+    prefer_db: bool = True,
+    sync_file_to_db: bool = False,
+) -> PersonaProfile | None:
+    normalized_id = str(persona_id or "").strip()
+    if prefer_db and db is not None and normalized_id:
+        persona = load_persona_from_db(db=db, persona_id=normalized_id)
+        if persona is not None:
+            return persona
+
+    persona = load_persona(persona_path)
+    if persona is not None and db is not None and sync_file_to_db:
+        save_persona_to_db(db=db, persona=persona, source_path=persona_path)
+        if prefer_db and normalized_id and persona.persona_id != normalized_id:
+            raise ValueError(
+                f"Persona file id={persona.persona_id!r} does not match requested persona_id={normalized_id!r}"
+            )
+    return persona
 
 
 def save_persona(persona: PersonaProfile, persona_path: Path) -> Path:
