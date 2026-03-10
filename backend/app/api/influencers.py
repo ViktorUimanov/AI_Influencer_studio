@@ -59,6 +59,7 @@ def upsert_influencer(
             name=request.name,
             description=request.description,
             hashtags=request.hashtags,
+            video_suggestions_requirement=request.video_suggestions_requirement,
             reference_image_path=request.reference_image_path,
         )
     except ValueError as exc:
@@ -77,6 +78,7 @@ def onboarding(
     name: str = Form(...),
     description: str = Form(...),
     hashtags: str = Form(...),
+    video_suggestions_requirement: str = Form(...),
     reference_image: UploadFile = File(...),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -89,6 +91,7 @@ def onboarding(
             name=name,
             description=description,
             hashtags=parsed_hashtags,
+            video_suggestions_requirement=video_suggestions_requirement,
             reference_image=reference_image,
         )
     except ValueError as exc:

@@ -36,6 +36,7 @@ class InfluencerService:
         name: str,
         description: str,
         hashtags: list[str],
+        video_suggestions_requirement: str,
         reference_image_path: str | None,
     ) -> InfluencerProfile:
         normalized_id = self._normalize_influencer_id(influencer_id)
@@ -50,6 +51,7 @@ class InfluencerService:
                 name=name.strip(),
                 description=description.strip(),
                 hashtags=cleaned_hashtags,
+                video_suggestions_requirement=video_suggestions_requirement.strip(),
                 reference_image_path=reference_image_path,
             )
             self.db.add(record)
@@ -57,6 +59,7 @@ class InfluencerService:
             record.name = name.strip()
             record.description = description.strip()
             record.hashtags = cleaned_hashtags
+            record.video_suggestions_requirement = video_suggestions_requirement.strip()
             if reference_image_path:
                 record.reference_image_path = reference_image_path
 
@@ -71,6 +74,7 @@ class InfluencerService:
         name: str,
         description: str,
         hashtags: list[str],
+        video_suggestions_requirement: str,
         reference_image: UploadFile,
     ) -> InfluencerProfile:
         normalized_id = self._normalize_influencer_id(influencer_id)
@@ -82,13 +86,17 @@ class InfluencerService:
             name=name,
             description=description,
             hashtags=hashtags,
+            video_suggestions_requirement=video_suggestions_requirement,
             reference_image_path=str(image_path),
         )
 
     def require_ready_influencer(self, influencer_id: str) -> InfluencerProfile:
         record = self.get_influencer(influencer_id)
         if record is None or not self.is_onboarding_complete(record):
-            raise ValueError("Influencer onboarding required. Provide reference image, description, and hashtags first.")
+            raise ValueError(
+                "Influencer onboarding required. Provide reference image, description, hashtags, "
+                "and video_suggestions_requirement first."
+            )
         return record
 
     def is_onboarding_complete(self, record: InfluencerProfile) -> bool:
@@ -97,6 +105,8 @@ class InfluencerService:
         if not record.description or not record.description.strip():
             return False
         if not record.hashtags:
+            return False
+        if not record.video_suggestions_requirement or not record.video_suggestions_requirement.strip():
             return False
         return True
 

@@ -78,6 +78,14 @@ class Settings(BaseSettings):
         default=120,
         validation_alias=AliasChoices("INSTAGRAM_CUSTOM_MAX_POSTS_PER_TAG", "instagram_custom_max_posts_per_tag"),
     )
+    x_api_bearer_token: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("X_API_BEARER_TOKEN", "x_api_bearer_token"),
+    )
+    x_api_base_url: str = Field(
+        default="https://api.x.com",
+        validation_alias=AliasChoices("X_API_BASE_URL", "x_api_base_url"),
+    )
 
     yt_dlp_command: str = Field(
         default="yt-dlp",
@@ -131,6 +139,10 @@ class Settings(BaseSettings):
         default=12.0,
         validation_alias=AliasChoices("APIFY_RETRY_MAX_BACKOFF_SEC", "apify_retry_max_backoff_sec"),
     )
+    gemini_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GEMINI_API_KEY", "gemini_api_key"),
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -149,6 +161,10 @@ class Settings(BaseSettings):
     @property
     def pipeline_runs_data_dir(self) -> Path:
         return Path(__file__).resolve().parents[2] / "data" / "pipeline_runs"
+
+    @property
+    def generated_images_data_dir(self) -> Path:
+        return Path(__file__).resolve().parents[2] / "data" / "generated_images"
 
 
 @lru_cache

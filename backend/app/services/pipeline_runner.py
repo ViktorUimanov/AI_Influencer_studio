@@ -10,8 +10,10 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.pipelines import SelectorRunConfig, SelectorThresholds, run_selector
 from app.pipelines.candidate_filter import CandidateFilterConfig, run_candidate_filter
+from app.schemas.generated_images import GeneratedImageOut
 from app.schemas.pipeline import PipelinePlatformRunOut, PipelineRunOut, PipelineRunRequest
 from app.services.downloader import TrendDownloadService
+from app.services.generated_images import GeneratedImageService
 from app.services.influencers import InfluencerService
 from app.services.trend_parser import TrendParserService
 
@@ -23,16 +25,17 @@ class PipelineRunnerService:
         self.trends = TrendParserService(db=db, settings=settings)
         self.downloader = TrendDownloadService(db=db, settings=settings)
         self.influencers = InfluencerService(db=db, settings=settings)
+        self.generated_images = GeneratedImageService(db=db, settings=settings)
 
     def run(self, request: PipelineRunRequest) -> PipelineRunOut:
         influencer = self.influencers.require_ready_influencer(request.influencer_id)
         persona = self.influencers.to_persona_profile(influencer)
         enabled_platforms = [platform for platform, cfg in request.platforms.items() if cfg.enabled]
-        if not enabled_platforms:
-            raise ValueError("At least one platform must be enabled.")
-        if request.filter.enabled and not request.download.enabled:
+        if not enabled_platforms and not request.image.enabled:
+            raise ValueError("Enable at least one platform or the image stage.")
+        if enabled_platforms and request.filter.enabled and not request.download.enabled:
             raise ValueError("Filter stage requires downloads to be enabled.")
-        if request.vlm.enabled and not request.filter.enabled:
+        if enabled_platforms and request.vlm.enabled and not request.filter.enabled:
             raise ValueError("Gemini stage requires filter stage to be enabled.")
 
         started_at = datetime.now(UTC)
@@ -41,6 +44,7 @@ class PipelineRunnerService:
         base_dir.mkdir(parents=True, exist_ok=True)
 
         platform_outputs: list[PipelinePlatformRunOut] = []
+        generated_images: list[GeneratedImageOut] = []
         for platform, cfg in request.platforms.items():
             platform_name = platform.lower().strip()
             if not cfg.enabled:
@@ -121,6 +125,7 @@ class PipelineRunnerService:
                             max_scene_cut_complexity=request.vlm.thresholds.max_scene_cut_complexity,
                         ),
                         persona=persona,
+                        video_suggestions_requirement=influencer.video_suggestions_requirement,
                     )
                 )
                 summary_file = self._latest_summary(vlm_dir)
@@ -146,11 +151,30 @@ class PipelineRunnerService:
                 )
             )
 
+        if request.image.enabled:
+            record = self.generated_images.generate(
+                influencer_id=influencer.influencer_id,
+                prompt=request.image.prompt,
+                picture_idea_id=request.image.picture_idea_id,
+                reference_image_path=request.image.reference_image_path,
+                model=request.image.model,
+                api_key_env=request.image.api_key_env,
+                aspect_ratio=request.image.aspect_ratio,
+                hashtag_strategy=request.image.hashtag_strategy,
+                hashtag_platforms=request.image.hashtag_platforms,
+                trend_run_ids=request.image.trend_run_ids,
+                trend_window_days=request.image.trend_window_days,
+                max_hashtags=request.image.max_hashtags,
+                mock=request.image.mock,
+            )
+            generated_images.append(GeneratedImageOut.model_validate(record))
+
         return PipelineRunOut(
             influencer_id=influencer.influencer_id,
             started_at=started_at,
             base_dir=str(base_dir.resolve()),
             platforms=platform_outputs,
+            generated_images=generated_images,
         )
 
     def _latest_summary(self, output_dir: Path) -> Path | None:

@@ -1,3 +1,31 @@
-from app.models.trends import InfluencerProfile, PersonaRecord, TrendDownload, TrendItem, TrendRun, TrendSignal
+from app.models.trends import (
+    GeneratedImage,
+    InfluencerProfile,
+    PersonaRecord,
+    PictureIdea,
+    TrendDownload,
+    TrendItem,
+    TrendRun,
+    TrendSignal,
+    XDraft,
+    XPost,
+    XPostMedia,
+    XTrendRun,
+    XTrendTopic,
+)
 
-__all__ = ["TrendRun", "TrendItem", "TrendSignal", "TrendDownload", "PersonaRecord", "InfluencerProfile"]
+__all__ = [
+    "TrendRun",
+    "TrendItem",
+    "TrendSignal",
+    "TrendDownload",
+    "PersonaRecord",
+    "InfluencerProfile",
+    "PictureIdea",
+    "GeneratedImage",
+    "XTrendRun",
+    "XTrendTopic",
+    "XPost",
+    "XPostMedia",
+    "XDraft",
+]

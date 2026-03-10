@@ -143,6 +143,7 @@ curl -X POST 'http://localhost:8000/api/v1/influencers/onboarding' \
   -F 'name=Mina' \
   -F 'description=Young female dance and lifestyle creator with clean natural look and confident solo performance style.' \
   -F 'hashtags=dance,dancing,choreography,dancechallenge' \
+  -F 'video_suggestions_requirement=Do not suggest blurred videos, group dances, helmet or mask shots, heavy occlusions, or dark club footage.' \
   -F 'reference_image=@/absolute/path/to/reference.jpg'
 ```
 
@@ -200,6 +201,135 @@ curl -X POST 'http://localhost:8000/api/v1/pipeline/run' \
       }
     }
   }'
+```
+
+Generate picture ideas from stored trend signals and influencer onboarding data:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/picture-ideas/generate' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "influencer_id": "mina-main",
+    "platforms": ["tiktok", "instagram"],
+    "limit": 6
+  }'
+
+curl 'http://localhost:8000/api/v1/picture-ideas?influencer_id=mina-main&limit=10'
+```
+
+Generate an image directly from the onboarded reference picture plus a prompt:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/generated-images/generate' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "influencer_id": "mina-main",
+    "prompt": "Create a clean outdoor wellness portrait at golden hour, athletic wear, natural greenery background, editorial quality.",
+    "model": "gemini-2.5-flash-image",
+    "aspect_ratio": "9:16",
+    "hashtag_strategy": "trending",
+    "hashtag_platforms": ["instagram"],
+    "trend_window_days": 7,
+    "max_hashtags": 6
+  }'
+
+curl 'http://localhost:8000/api/v1/generated-images?influencer_id=mina-main&limit=10'
+```
+
+Run the pipeline in image-only mode:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/pipeline/run' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "influencer_id": "mina-main",
+    "image": {
+      "enabled": true,
+      "prompt": "Create a strong dance creator promo still, clean studio light, full-body framing, sharp face detail.",
+      "model": "gemini-2.5-flash-image",
+      "aspect_ratio": "9:16"
+    }
+  }'
+```
+
+Collect trending X topics plus popular posts with images for a topic:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/x/collect' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": "healthy lifestyle",
+    "location_woeid": 1,
+    "max_topics": 10,
+    "max_posts": 20,
+    "result_type": "popular",
+    "only_with_images": true,
+    "lang": "en"
+  }'
+
+curl 'http://localhost:8000/api/v1/x/posts?run_id=1&only_with_images=true&limit=10'
+curl 'http://localhost:8000/api/v1/x/topics?run_id=1&limit=10'
+```
+
+Run the X generation pipeline from the influencer's own hashtags:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/x/pipeline/run' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "influencer_id": "image-live",
+    "mode": "base_hashtags",
+    "selected_topics_limit": 4,
+    "max_posts_per_topic": 8,
+    "max_total_posts": 20,
+    "draft_limit": 2,
+    "image_mode": "prefer",
+    "lang": "en",
+    "model": "gemini-3.1-flash-lite-preview"
+  }'
+```
+
+Run the X generation pipeline from the live top-popularity list:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/x/pipeline/run' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "influencer_id": "image-live",
+    "mode": "trending_hashtags",
+    "location_woeid": 1,
+    "max_trending_topics": 100,
+    "selected_topics_limit": 5,
+    "max_posts_per_topic": 8,
+    "max_total_posts": 20,
+    "draft_limit": 2,
+    "image_mode": "any",
+    "lang": "en",
+    "model": "gemini-3.1-flash-lite-preview"
+  }'
+```
+
+Notes:
+- `base_hashtags` uses the onboarded influencer hashtags as the topic source.
+- `trending_hashtags` pulls the top X trends for the configured WOEID, then asks Gemini which ones genuinely fit the influencer profile before collecting posts.
+- If no live X trends match the influencer strongly enough, `trending_hashtags` returns `400` instead of forcing unrelated topics into the draft pipeline.
+- `image_mode` values:
+  - `any`: mix text and image posts
+  - `prefer`: rank image-backed posts slightly higher
+  - `required`: only collect image-backed posts
+
+Generate original X post + image adaptation drafts from collected posts:
+
+```bash
+curl -X POST 'http://localhost:8000/api/v1/x/drafts/generate' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "run_id": 1,
+    "limit": 3,
+    "require_images": true
+  }'
+
+curl 'http://localhost:8000/api/v1/x/drafts?run_id=1&limit=10'
 ```
 
 8. Inspect run:
@@ -305,6 +435,13 @@ export GEMINI_API_KEY=your_api_key
 - Default persona profile lives in `backend/data/personas/default_persona.json` and is injected into Gemini prompt/scoring (`persona_fit`).
 - Persona access is centralized: pipelines can load by `--persona-id` from the `personas` table, with JSON file fallback via `--persona-file`.
 - When a persona file is provided, the resolver can sync it into the DB automatically so later pipeline stages can fetch the same persona by ID.
+- Influencer onboarding now stores `video_suggestions_requirement`, which is appended to the Gemini suitability prompt as an influencer-specific "do not want" block.
+- Picture-idea generation analyzes stored trend signals (`hashtag`, `topic`, `style`, `hook`) and stores ranked prompts in `picture_ideas`.
+- Image generation stores outputs in `generated_images` and reuses the onboarded reference image by default; pass a direct `prompt` or a `picture_idea_id`.
+- `/api/v1/pipeline/run` supports an image-only run, so you can generate an image without enabling any scraping platform.
+- X content ingestion is available under `/api/v1/x/*` and uses the official X API with `X_API_BEARER_TOKEN`.
+- X collection stores location trends, searched posts, attached media, and adaptation drafts separately from the TikTok/Instagram pipeline.
+- X draft generation is intentionally original-content oriented: it uses high-performing post patterns and attached-image context as inspiration, not direct copying.
 - With `--sync-folders`, VLM decisions are synced to `backend/data/tmp/selected` and `backend/data/tmp/rejected`.
 - Candidate filter script now syncs top-K candidates into `backend/data/tmp/filtered` by default.
 - End-to-end `scripts/run_selector_pipeline.py` runs candidate filtering and VLM selection in one command.

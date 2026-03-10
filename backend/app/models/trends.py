@@ -119,9 +119,135 @@ class InfluencerProfile(Base):
     reference_image_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     hashtags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    video_suggestions_requirement: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+
+class PictureIdea(Base):
+    __tablename__ = "picture_ideas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    influencer_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    platforms: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_run_ids: Mapped[list[int] | None] = mapped_column(JSON, nullable=True)
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    hashtags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GeneratedImage(Base):
+    __tablename__ = "generated_images"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    influencer_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    picture_idea_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    hashtags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    reference_image_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    output_image_path: Mapped[str] = mapped_column(Text, nullable=False)
+    mime_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class XTrendRun(Base):
+    __tablename__ = "x_trend_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    status: Mapped[str] = mapped_column(String(32), default="running", nullable=False)
+    query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    location_woeid: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    summary: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    topics: Mapped[list["XTrendTopic"]] = relationship(back_populates="run", cascade="all, delete-orphan")
+    posts: Mapped[list["XPost"]] = relationship(back_populates="run", cascade="all, delete-orphan")
+    drafts: Mapped[list["XDraft"]] = relationship(back_populates="run", cascade="all, delete-orphan")
+
+
+class XTrendTopic(Base):
+    __tablename__ = "x_trend_topics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("x_trend_runs.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    trend_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tweet_volume: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    run: Mapped["XTrendRun"] = relationship(back_populates="topics")
+
+
+class XPost(Base):
+    __tablename__ = "x_posts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("x_trend_runs.id"), nullable=False, index=True)
+    post_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    author_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    author_username: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    author_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    lang: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    conversation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at_x: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    repost_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reply_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    quote_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    bookmark_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    impression_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    has_images: Mapped[bool] = mapped_column(default=False, nullable=False, index=True)
+    popularity_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False, index=True)
+    permalink: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    run: Mapped["XTrendRun"] = relationship(back_populates="posts")
+    media_items: Mapped[list["XPostMedia"]] = relationship(back_populates="post", cascade="all, delete-orphan")
+
+
+class XPostMedia(Base):
+    __tablename__ = "x_post_media"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_row_id: Mapped[int] = mapped_column(ForeignKey("x_posts.id"), nullable=False, index=True)
+    media_key: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    media_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    media_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preview_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    alt_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    post: Mapped["XPost"] = relationship(back_populates="media_items")
+
+
+class XDraft(Base):
+    __tablename__ = "x_drafts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("x_trend_runs.id"), nullable=False, index=True)
+    topic: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    source_post_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    draft_text: Mapped[str] = mapped_column(Text, nullable=False)
+    image_brief: Mapped[str | None] = mapped_column(Text, nullable=True)
+    hook_pattern: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    run: Mapped["XTrendRun"] = relationship(back_populates="drafts")

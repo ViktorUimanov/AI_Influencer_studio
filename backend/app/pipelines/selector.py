@@ -43,6 +43,7 @@ class SelectorRunConfig:
     sync_folders: bool
     thresholds: SelectorThresholds
     persona: PersonaProfile | None = None
+    video_suggestions_requirement: str | None = None
 
 
 @dataclass(slots=True)
@@ -84,9 +85,15 @@ def parse_hashtags(hashtags_csv: str) -> list[str]:
     return [h.strip().lstrip("#") for h in hashtags_csv.split(",") if h.strip()]
 
 
-def build_prompt(theme: str, hashtags: list[str], persona: PersonaProfile | None) -> str:
+def build_prompt(
+    theme: str,
+    hashtags: list[str],
+    persona: PersonaProfile | None,
+    video_suggestions_requirement: str | None = None,
+) -> str:
     hashtags_text = ", ".join(hashtags) if hashtags else "(none provided)"
     persona_block = persona.to_prompt_block() if persona else "Persona: generic healthy lifestyle creator"
+    negative_block = (video_suggestions_requirement or "").strip() or "(none provided)"
 
     return f"""
 You are a strict video suitability judge for AI subject substitution (face/person replacement).
@@ -96,6 +103,9 @@ Target hashtags: {hashtags_text}
 
 Persona profile:
 {persona_block}
+
+Additional rejection requirements from onboarding:
+{negative_block}
 
 Task:
 Evaluate whether this video is suitable for replacing the main person with this specific persona.
@@ -205,7 +215,12 @@ def run_selector(config: SelectorRunConfig) -> int:
         print(f"[vlm] no video files in {config.input_dir}")
         return 1
 
-    prompt = build_prompt(theme=config.theme, hashtags=config.hashtags, persona=config.persona)
+    prompt = build_prompt(
+        theme=config.theme,
+        hashtags=config.hashtags,
+        persona=config.persona,
+        video_suggestions_requirement=config.video_suggestions_requirement,
+    )
 
     api_key = os.getenv(config.api_key_env, "").strip()
     if not config.mock and not api_key:

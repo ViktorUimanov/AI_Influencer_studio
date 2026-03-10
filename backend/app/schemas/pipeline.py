@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.generated_images import GeneratedImageOut
 from app.schemas.trends import TrendSelectorIn
 
 
@@ -44,12 +45,29 @@ class VlmStageConfigIn(BaseModel):
     thresholds: VlmThresholdsIn = Field(default_factory=VlmThresholdsIn)
 
 
+class ImageStageConfigIn(BaseModel):
+    enabled: bool = False
+    prompt: str = Field(default="", max_length=8000)
+    picture_idea_id: int | None = Field(default=None, ge=1)
+    reference_image_path: str | None = None
+    model: str = "gemini-2.5-flash-image"
+    api_key_env: str = "GEMINI_API_KEY"
+    aspect_ratio: str = "9:16"
+    hashtag_strategy: str = Field(default="mixed", pattern="^(base|trending|mixed)$")
+    hashtag_platforms: list[str] = Field(default_factory=lambda: ["instagram"])
+    trend_run_ids: list[int] = Field(default_factory=list)
+    trend_window_days: int = Field(default=7, ge=1, le=365)
+    max_hashtags: int = Field(default=6, ge=1, le=20)
+    mock: bool = False
+
+
 class PipelineRunRequest(BaseModel):
     influencer_id: str = Field(..., min_length=1, max_length=128)
-    platforms: dict[str, PlatformPipelineConfigIn]
+    platforms: dict[str, PlatformPipelineConfigIn] = Field(default_factory=dict)
     download: DownloadStageConfigIn = Field(default_factory=DownloadStageConfigIn)
     filter: FilterStageConfigIn = Field(default_factory=FilterStageConfigIn)
     vlm: VlmStageConfigIn = Field(default_factory=VlmStageConfigIn)
+    image: ImageStageConfigIn = Field(default_factory=ImageStageConfigIn)
 
 
 class PipelinePlatformRunOut(BaseModel):
@@ -71,3 +89,4 @@ class PipelineRunOut(BaseModel):
     started_at: datetime
     base_dir: str
     platforms: list[PipelinePlatformRunOut]
+    generated_images: list[GeneratedImageOut] = Field(default_factory=list)
