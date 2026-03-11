@@ -185,6 +185,7 @@ def run_prototype_migrations(engine: Engine) -> None:
                         quote_count INTEGER NOT NULL DEFAULT 0,
                         bookmark_count INTEGER NOT NULL DEFAULT 0,
                         impression_count INTEGER NOT NULL DEFAULT 0,
+                        media_view_count INTEGER NOT NULL DEFAULT 0,
                         has_images BOOLEAN NOT NULL DEFAULT 0,
                         popularity_score FLOAT NOT NULL DEFAULT 0,
                         permalink TEXT NULL,
@@ -198,6 +199,11 @@ def run_prototype_migrations(engine: Engine) -> None:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_x_posts_author_id ON x_posts (author_id)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_x_posts_has_images ON x_posts (has_images)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_x_posts_popularity_score ON x_posts (popularity_score)"))
+    elif "x_posts" in tables:
+        columns = {col["name"] for col in inspector.get_columns("x_posts")}
+        if "media_view_count" not in columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE x_posts ADD COLUMN media_view_count INTEGER NOT NULL DEFAULT 0"))
 
     if "x_post_media" not in tables:
         with engine.begin() as conn:

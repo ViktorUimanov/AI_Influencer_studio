@@ -66,6 +66,7 @@ class XPostOut(BaseModel):
     quote_count: int
     bookmark_count: int
     impression_count: int
+    media_view_count: int
     has_images: bool
     popularity_score: float
     permalink: str | None = None

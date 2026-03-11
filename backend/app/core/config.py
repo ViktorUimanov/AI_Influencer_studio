@@ -86,6 +86,10 @@ class Settings(BaseSettings):
         default="https://api.x.com",
         validation_alias=AliasChoices("X_API_BASE_URL", "x_api_base_url"),
     )
+    x_api_search_pages: int = Field(
+        default=4,
+        validation_alias=AliasChoices("X_API_SEARCH_PAGES", "x_api_search_pages"),
+    )
 
     yt_dlp_command: str = Field(
         default="yt-dlp",

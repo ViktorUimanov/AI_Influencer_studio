@@ -209,6 +209,7 @@ class XPost(Base):
     quote_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     bookmark_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     impression_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    media_view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     has_images: Mapped[bool] = mapped_column(default=False, nullable=False, index=True)
     popularity_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False, index=True)
     permalink: Mapped[str | None] = mapped_column(Text, nullable=True)

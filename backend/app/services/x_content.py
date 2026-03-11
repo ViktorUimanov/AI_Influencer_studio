@@ -302,9 +302,14 @@ class XContentService:
             search_queries = [self._compose_query(query=query, only_with_images=only_with_images, lang=lang)]
 
         aggregated: dict[str, dict] = {}
-        per_query_limit = min(max(10, max_posts * 2), 50)
+        per_query_limit = min(max(20, max_posts * 3), 200)
         for search_query in search_queries:
-            batch = self._fetch_posts_v2(search_query=search_query, logical_query=query, max_posts=per_query_limit)
+            batch = self._fetch_posts_v2(
+                search_query=search_query,
+                logical_query=query,
+                max_posts=per_query_limit,
+                sort_order="relevancy",
+            )
             for post in batch:
                 existing = aggregated.get(post["post_id"])
                 if existing is None or post["popularity_score"] > existing["popularity_score"]:
@@ -314,35 +319,58 @@ class XContentService:
         posts.sort(key=lambda item: (item["popularity_score"], item["like_count"], item["repost_count"]), reverse=True)
         return posts[:max_posts]
 
-    def _fetch_posts_v2(self, *, search_query: str, logical_query: str, max_posts: int) -> list[dict]:
+    def _fetch_posts_v2(self, *, search_query: str, logical_query: str, max_posts: int, sort_order: str = "relevancy") -> list[dict]:
         url = f"{self.settings.x_api_base_url.rstrip('/')}/2/tweets/search/recent"
-        payload = self._request_json(
-            url=url,
-            params={
+        posts: list[dict] = []
+        seen_ids: set[str] = set()
+        next_token: str | None = None
+        max_results = min(max(max_posts, 20), 100)
+        max_pages = max(1, min(self.settings.x_api_search_pages, math.ceil(max_posts / max_results) + 1))
+
+        for _ in range(max_pages):
+            params = {
                 "query": search_query,
-                "max_results": min(max(max_posts, 10), 100),
+                "max_results": max_results,
+                "sort_order": sort_order,
                 "tweet.fields": "created_at,lang,public_metrics,attachments,author_id,conversation_id,text",
                 "expansions": "attachments.media_keys,author_id",
-                "media.fields": "url,preview_image_url,type,width,height,alt_text",
+                "media.fields": "url,preview_image_url,type,width,height,alt_text,public_metrics",
                 "user.fields": "username,name",
-            },
-        )
-        tweets = payload.get("data") or []
-        includes = payload.get("includes") or {}
-        media_by_key = {
-            str(media.get("media_key") or ""): media
-            for media in (includes.get("media") or [])
-            if str(media.get("media_key") or "")
-        }
-        users_by_id = {
-            str(user.get("id") or ""): user
-            for user in (includes.get("users") or [])
-            if str(user.get("id") or "")
-        }
-        posts: list[dict] = []
-        for tweet in tweets:
-            parsed = self._parse_v2_tweet(tweet=tweet, query=logical_query, media_by_key=media_by_key, users_by_id=users_by_id)
-            posts.append(parsed)
+            }
+            if next_token:
+                params["next_token"] = next_token
+            payload = self._request_json(url=url, params=params)
+            tweets = payload.get("data") or []
+            includes = payload.get("includes") or {}
+            media_by_key = {
+                str(media.get("media_key") or ""): media
+                for media in (includes.get("media") or [])
+                if str(media.get("media_key") or "")
+            }
+            users_by_id = {
+                str(user.get("id") or ""): user
+                for user in (includes.get("users") or [])
+                if str(user.get("id") or "")
+            }
+            for tweet in tweets:
+                parsed = self._parse_v2_tweet(
+                    tweet=tweet,
+                    query=logical_query,
+                    media_by_key=media_by_key,
+                    users_by_id=users_by_id,
+                )
+                post_id = parsed.get("post_id")
+                if not post_id or post_id in seen_ids:
+                    continue
+                seen_ids.add(post_id)
+                posts.append(parsed)
+                if len(posts) >= max_posts:
+                    break
+            if len(posts) >= max_posts:
+                break
+            next_token = ((payload.get("meta") or {}).get("next_token")) or None
+            if not next_token:
+                break
         posts.sort(key=lambda item: (item["popularity_score"], item["like_count"]), reverse=True)
         return posts[:max_posts]
 
@@ -353,10 +381,13 @@ class XContentService:
         media_keys = ((tweet.get("attachments") or {}).get("media_keys")) or []
         media_payloads: list[dict] = []
         has_images = False
+        media_view_count = 0
         for media_key in media_keys:
             media = media_by_key.get(str(media_key), {})
             media_type = str(media.get("type") or "").lower() or None
             has_images = has_images or media_type == "photo"
+            media_metrics = media.get("public_metrics") or {}
+            media_view_count = max(media_view_count, self._to_int(media_metrics.get("view_count")) or 0)
             media_payloads.append(
                 {
                     "media_key": str(media.get("media_key") or media_key) or None,
@@ -382,6 +413,7 @@ class XContentService:
             repost_count=repost_count,
             reply_count=reply_count,
             quote_count=quote_count,
+            media_view_count=media_view_count,
             has_images=has_images,
         )
 
@@ -405,6 +437,7 @@ class XContentService:
             "quote_count": quote_count,
             "bookmark_count": bookmark_count,
             "impression_count": impression_count,
+            "media_view_count": media_view_count,
             "has_images": has_images,
             "popularity_score": popularity_score,
             "permalink": permalink,
@@ -478,7 +511,15 @@ class XContentService:
             return True
         total_engagement = sum(
             self._to_int(post.get(field)) or 0
-            for field in ("like_count", "repost_count", "reply_count", "quote_count", "bookmark_count", "impression_count")
+            for field in (
+                "like_count",
+                "repost_count",
+                "reply_count",
+                "quote_count",
+                "bookmark_count",
+                "impression_count",
+                "media_view_count",
+            )
         )
         if total_engagement <= 0:
             return True
@@ -604,8 +645,19 @@ class XContentService:
             raise last_error
         raise RuntimeError("request failed without error")
 
-    def _popularity_score(self, *, favorite_count: int, repost_count: int, reply_count: int, quote_count: int, has_images: bool) -> float:
+    def _popularity_score(
+        self,
+        *,
+        favorite_count: int,
+        repost_count: int,
+        reply_count: int,
+        quote_count: int,
+        media_view_count: int,
+        has_images: bool,
+    ) -> float:
         base = (favorite_count * 1.0) + (repost_count * 2.2) + (reply_count * 1.6) + (quote_count * 1.8)
+        if media_view_count > 0:
+            base += min(math.log(media_view_count + 1, 10) * 2.5, 18.0)
         if has_images:
             base *= 1.12
         return round(math.log(base + 1, 10), 4)
