@@ -1,0 +1,68 @@
+{
+    "influencer_id": "altf4girl",
+    "platforms": {
+      "tiktok": {
+        "enabled": true,
+        "source": "tiktok_custom",
+        "limit": 25,
+        "selector": {
+          "mode": "mixed",
+          "hashtags": ["altgirl", "alt_girl", "dancing", "dancecreator"],
+          "search_terms": [
+            "alt girl dance",
+            "alt girl dancing",
+            "solo alt dance"
+          ],
+          "published_within_days": 30,
+          "require_topic_match": true
+        }
+      },
+      "instagram": {
+        "enabled": true,
+        "source": "apify",
+        "limit": 20,
+        "selector": {
+          "mode": "mixed",
+          "hashtags": [
+            "altgirl",
+            "dance",
+            "dancing",
+            "dancecreator",
+            "choreography",
+            "dancetrend",
+            "dancechallenge",
+            "solodance",
+            "altstyle",
+            "edgyfashion"
+          ],
+          "search_terms": [
+            "alt girl dance",
+            "alt girl dancing",
+            "solo alt dance"
+          ],
+          "published_within_days": 30,
+          "require_topic_match": true
+        }
+      }
+    },
+    "download": {
+      "enabled": true,
+      "force": false
+    },
+    "filter": {
+      "enabled": true,
+      "probe_seconds": 8,
+      "workers": 4,
+      "top_k": 15
+    },
+    "vlm": {
+      "enabled": true,
+      "model": "gemini-3.1-flash-lite-preview",
+      "api_key_env": "GEMINI_API_KEY",
+      "timeout_sec": 300,
+      "mock": false,
+      "max_videos": 15,
+      "theme": "alt girl dance creator channel",
+      "sync_folders": true
+    }
+  }

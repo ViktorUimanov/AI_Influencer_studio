@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+
+load_dotenv()  # export .env vars into os.environ for os.getenv() callers
+
 from app.api.generated_images import router as generated_images_router
 from app.api.influencers import router as influencers_router
 from app.api.pipeline import router as pipeline_router
