@@ -15,6 +15,14 @@ class Settings(BaseSettings):
         default="postgresql+psycopg://postgres:postgres@localhost:5432/influencer",
         validation_alias=AliasChoices("DATABASE_URL", "database_url"),
     )
+    storage_mode: str = Field(
+        default="db",
+        validation_alias=AliasChoices("STORAGE_MODE", "storage_mode"),
+    )
+    workspace_data_dir_env: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("WORKSPACE_DATA_DIR", "workspace_data_dir"),
+    )
 
     # Source strategy: seed | apify | tiktok_custom | instagram_custom
     default_source: str = Field(
@@ -151,24 +159,38 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property
+    def repo_root(self) -> Path:
+        return Path(__file__).resolve().parents[3]
+
+    @property
+    def backend_root(self) -> Path:
+        return Path(__file__).resolve().parents[2]
+
+    @property
+    def workspace_data_dir(self) -> Path:
+        if self.workspace_data_dir_env:
+            return Path(self.workspace_data_dir_env).expanduser().resolve()
+        return (self.repo_root / "shared").resolve()
+
+    @property
     def seed_data_dir(self) -> Path:
-        return Path(__file__).resolve().parents[2] / "data" / "seeds"
+        return self.backend_root / "data" / "seeds"
 
     @property
     def downloads_data_dir(self) -> Path:
-        return Path(__file__).resolve().parents[2] / "data" / "downloads"
+        return self.workspace_data_dir / "downloads"
 
     @property
     def influencers_data_dir(self) -> Path:
-        return Path(__file__).resolve().parents[2] / "data" / "influencers"
+        return self.workspace_data_dir / "influencers"
 
     @property
     def pipeline_runs_data_dir(self) -> Path:
-        return Path(__file__).resolve().parents[2] / "data" / "pipeline_runs"
+        return self.workspace_data_dir / "pipeline_runs"
 
     @property
     def generated_images_data_dir(self) -> Path:
-        return Path(__file__).resolve().parents[2] / "data" / "generated_images"
+        return self.workspace_data_dir / "generated_images"
 
 
 @lru_cache

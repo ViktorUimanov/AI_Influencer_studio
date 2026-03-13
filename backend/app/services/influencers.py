@@ -11,21 +11,27 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.models import InfluencerProfile
 from app.pipelines.persona import PersonaProfile
+from app.services.filesystem_store import FilesystemStore, FsInfluencerRecord
 
 
 class InfluencerService:
     def __init__(self, db: Session, settings: Settings):
         self.db = db
         self.settings = settings
+        self.fs = FilesystemStore(settings=settings)
 
-    def list_influencers(self) -> list[InfluencerProfile]:
+    def list_influencers(self) -> list[InfluencerProfile | FsInfluencerRecord]:
+        if self.settings.storage_mode == "filesystem":
+            return self.fs.list_influencers()
         stmt = select(InfluencerProfile).order_by(InfluencerProfile.updated_at.desc(), InfluencerProfile.id.desc())
         return list(self.db.execute(stmt).scalars().all())
 
-    def get_influencer(self, influencer_id: str) -> InfluencerProfile | None:
+    def get_influencer(self, influencer_id: str) -> InfluencerProfile | FsInfluencerRecord | None:
         normalized = self._normalize_influencer_id(influencer_id)
         if not normalized:
             return None
+        if self.settings.storage_mode == "filesystem":
+            return self.fs.load_influencer(normalized)
         stmt = select(InfluencerProfile).where(InfluencerProfile.influencer_id == normalized).limit(1)
         return self.db.execute(stmt).scalar_one_or_none()
 
@@ -38,13 +44,25 @@ class InfluencerService:
         hashtags: list[str],
         video_suggestions_requirement: str,
         reference_image_path: str | None,
-    ) -> InfluencerProfile:
+    ) -> InfluencerProfile | FsInfluencerRecord:
         normalized_id = self._normalize_influencer_id(influencer_id)
         if not normalized_id:
             raise ValueError("influencer_id is required")
 
-        record = self.get_influencer(normalized_id)
         cleaned_hashtags = self._normalize_hashtags(hashtags)
+        if self.settings.storage_mode == "filesystem":
+            return self.fs.save_influencer(
+                normalized_id,
+                {
+                    "name": name.strip(),
+                    "description": description.strip(),
+                    "hashtags": cleaned_hashtags,
+                    "video_suggestions_requirement": video_suggestions_requirement.strip(),
+                    "reference_image_path": reference_image_path,
+                },
+            )
+
+        record = self.get_influencer(normalized_id)
         if record is None:
             record = InfluencerProfile(
                 influencer_id=normalized_id,
@@ -76,7 +94,7 @@ class InfluencerService:
         hashtags: list[str],
         video_suggestions_requirement: str,
         reference_image: UploadFile,
-    ) -> InfluencerProfile:
+    ) -> InfluencerProfile | FsInfluencerRecord:
         normalized_id = self._normalize_influencer_id(influencer_id)
         if not normalized_id:
             raise ValueError("influencer_id is required")
@@ -90,7 +108,7 @@ class InfluencerService:
             reference_image_path=str(image_path),
         )
 
-    def require_ready_influencer(self, influencer_id: str) -> InfluencerProfile:
+    def require_ready_influencer(self, influencer_id: str) -> InfluencerProfile | FsInfluencerRecord:
         record = self.get_influencer(influencer_id)
         if record is None or not self.is_onboarding_complete(record):
             raise ValueError(
@@ -99,7 +117,7 @@ class InfluencerService:
             )
         return record
 
-    def is_onboarding_complete(self, record: InfluencerProfile) -> bool:
+    def is_onboarding_complete(self, record: InfluencerProfile | FsInfluencerRecord) -> bool:
         if not record.reference_image_path:
             return False
         if not record.description or not record.description.strip():
@@ -110,7 +128,7 @@ class InfluencerService:
             return False
         return True
 
-    def to_persona_profile(self, record: InfluencerProfile) -> PersonaProfile:
+    def to_persona_profile(self, record: InfluencerProfile | FsInfluencerRecord) -> PersonaProfile:
         hashtags = [tag for tag in (record.hashtags or []) if str(tag).strip()]
         return PersonaProfile(
             persona_id=f"influencer_{record.influencer_id}",

@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.models import TrendDownload, TrendItem
+from app.adapters.types import RawTrendVideo
 
 
 class TrendDownloadService:
@@ -127,6 +128,60 @@ class TrendDownloadService:
             stmt = stmt.where(TrendDownload.status == status.lower())
 
         return list(self.db.scalars(stmt))
+
+    def download_raw_videos(
+        self,
+        *,
+        platform: str,
+        videos: list[RawTrendVideo],
+        force: bool = False,
+        download_dir: str | None = None,
+    ) -> list[dict]:
+        output: list[dict] = []
+        for index, video in enumerate(videos, start=1):
+            if not video.video_url:
+                output.append(
+                    {
+                        "index": index,
+                        "platform": platform,
+                        "source_item_id": video.source_item_id,
+                        "source_url": "",
+                        "status": "skipped",
+                        "local_path": None,
+                        "error_message": "Item has no video_url",
+                    }
+                )
+                continue
+            try:
+                download_info = self._run_ytdlp(url=video.video_url, platform=platform, download_dir=download_dir)
+                downloaded_path = Path(download_info["local_path"])
+                path = self._rename_download_for_raw_video(downloaded_path, video)
+                output.append(
+                    {
+                        "index": index,
+                        "platform": platform,
+                        "source_item_id": video.source_item_id,
+                        "source_url": video.video_url,
+                        "status": "downloaded",
+                        "local_path": str(path.resolve()),
+                        "file_ext": path.suffix.lstrip(".") or None,
+                        "file_size_bytes": path.stat().st_size,
+                        "sha256": self._sha256(path),
+                    }
+                )
+            except Exception as exc:
+                output.append(
+                    {
+                        "index": index,
+                        "platform": platform,
+                        "source_item_id": video.source_item_id,
+                        "source_url": video.video_url,
+                        "status": "failed",
+                        "local_path": None,
+                        "error_message": str(exc),
+                    }
+                )
+        return output
 
     def _latest_download_for_item(self, item_id: int) -> TrendDownload | None:
         stmt = (
@@ -257,6 +312,21 @@ class TrendDownloadService:
         downloaded_path.rename(target_path)
         return target_path
 
+    def _rename_download_for_raw_video(self, downloaded_path: Path, video: RawTrendVideo) -> Path:
+        if not downloaded_path.exists():
+            raise RuntimeError(f"Downloaded file does not exist: {downloaded_path}")
+
+        suffix = downloaded_path.suffix or ".mp4"
+        target_name = self._build_raw_video_filename(video=video, suffix=suffix)
+        if downloaded_path.name == target_name:
+            return downloaded_path
+
+        target_path = downloaded_path.with_name(target_name)
+        if target_path.exists():
+            target_path.unlink()
+        downloaded_path.rename(target_path)
+        return target_path
+
     def _build_item_filename(self, item: TrendItem, suffix: str) -> str:
         date_part = (
             item.published_at.astimezone(UTC).strftime("%Y%m%d")
@@ -270,6 +340,19 @@ class TrendDownloadService:
             source_uid = hashlib.sha1(fallback_seed.encode("utf-8")).hexdigest()[:12]
 
         return f"{item.platform}_{date_part}_views{views_part}_uid{source_uid}{suffix}"
+
+    def _build_raw_video_filename(self, video: RawTrendVideo, suffix: str) -> str:
+        date_part = (
+            video.published_at.astimezone(UTC).strftime("%Y%m%d")
+            if video.published_at
+            else "unknown"
+        )
+        views_part = str(max(0, int(video.views or 0)))
+        source_uid = self._sanitize_token(video.source_item_id or "")
+        if not source_uid:
+            fallback_seed = video.video_url or f"{video.platform}-{date_part}-{views_part}"
+            source_uid = hashlib.sha1(fallback_seed.encode("utf-8")).hexdigest()[:12]
+        return f"{video.platform}_{date_part}_views{views_part}_uid{source_uid}{suffix}"
 
     def _sanitize_token(self, raw: str, limit: int = 64) -> str:
         token = re.sub(r"[^a-zA-Z0-9_-]+", "", str(raw or ""))

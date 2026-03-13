@@ -90,3 +90,35 @@ class PipelineRunOut(BaseModel):
     base_dir: str
     platforms: list[PipelinePlatformRunOut]
     generated_images: list[GeneratedImageOut] = Field(default_factory=list)
+
+
+class PipelineAssetOut(BaseModel):
+    id: str
+    name: str
+    path: str
+    media_type: str
+    kind: str
+    platform: str | None = None
+    size_bytes: int | None = None
+    created_at: datetime | None = None
+
+
+class PipelinePlatformRunDetailOut(PipelinePlatformRunOut):
+    selected_assets: list[PipelineAssetOut] = Field(default_factory=list)
+    filtered_assets: list[PipelineAssetOut] = Field(default_factory=list)
+
+
+class PipelineRunSummaryOut(BaseModel):
+    run_id: str
+    influencer_id: str
+    started_at: datetime
+    base_dir: str
+    status: str = "Completed"
+    request: dict | None = None
+    platforms: list[PipelinePlatformRunOut] = Field(default_factory=list)
+    generated_images_count: int = 0
+
+
+class PipelineRunDetailOut(PipelineRunSummaryOut):
+    platforms: list[PipelinePlatformRunDetailOut] = Field(default_factory=list)
+    generated_images: list[GeneratedImageOut] = Field(default_factory=list)

@@ -175,6 +175,43 @@ class TrendParserService:
 
         return self.get_run(run.id)
 
+    def collect_raw(
+        self,
+        platforms: list[str],
+        limit_per_platform: int,
+        source: str | None = None,
+        sources_by_platform: dict[str, str] | None = None,
+        selectors: dict[str, dict] | None = None,
+    ) -> dict[str, list[RawTrendVideo]]:
+        platforms_normalized: list[str] = []
+        seen = set()
+        for platform in platforms:
+            normalized = (platform or "").lower().strip()
+            if normalized in VALID_PLATFORMS and normalized not in seen:
+                platforms_normalized.append(normalized)
+                seen.add(normalized)
+        if not platforms_normalized:
+            raise ValueError("No supported platforms provided. Use tiktok and/or instagram.")
+
+        source_strategy = (source or self.settings.default_source).lower().strip()
+        if source_strategy not in VALID_SOURCES:
+            raise ValueError("Unsupported source. Use seed, apify, tiktok_custom, or instagram_custom.")
+        sources_by_platform = {str(k).lower(): str(v).lower() for k, v in (sources_by_platform or {}).items()}
+        selectors = selectors or {}
+
+        platform_videos: dict[str, list[RawTrendVideo]] = {}
+        for platform in platforms_normalized:
+            selector = TrendFetchSelector(**(selectors.get(platform) or {}))
+            platform_source = sources_by_platform.get(platform, source_strategy)
+            videos = self._fetch_videos(
+                platform=platform,
+                limit=limit_per_platform,
+                source=platform_source,
+                selector=selector,
+            )
+            platform_videos[platform] = videos
+        return platform_videos
+
     def list_runs(self, limit: int = 20) -> list[TrendRun]:
         stmt = select(TrendRun).order_by(desc(TrendRun.id)).limit(limit)
         return list(self.db.scalars(stmt))

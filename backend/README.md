@@ -11,7 +11,7 @@ FastAPI backend for trend ingestion and summarization, focused on TikTok + Insta
   - `instagram_custom` (local `instaloader`, no Apify)
   - `apify` (if configured)
   - `seed` fallback (local sample data)
-- Persistent job tracking in Postgres:
+- Optional persistent job tracking in Postgres or filesystem mode:
   - ingestion runs
   - raw trend items
   - extracted trend signals
@@ -20,16 +20,10 @@ FastAPI backend for trend ingestion and summarization, focused on TikTok + Insta
 
 ## Quick start
 
-1. Start Postgres:
+1. Create a virtual environment and install deps:
 
 ```bash
 cd backend
-docker compose up -d
-```
-
-2. Create a virtual environment and install deps:
-
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -41,22 +35,21 @@ For local API smoke tests with `TestClient`, install dev extras:
 pip install -r requirements-dev.txt
 ```
 
-3. Configure env:
+2. Configure env:
 
 ```bash
 cp .env.example .env
 ```
 
-4. Run API:
+Default prototype mode:
+- `DATABASE_URL=sqlite+pysqlite:////tmp/influencer_dev.db`
+- `STORAGE_MODE=filesystem`
+- shared artifacts live under repo-root `shared/`
+
+3. Run API:
 
 ```bash
 uvicorn app.main:app --reload --port 8000
-```
-
-If Postgres is down, use auto-fallback launcher (falls back to SQLite):
-
-```bash
-./scripts/run_dev.sh
 ```
 
 Open simple UI:
@@ -469,7 +462,8 @@ cd backend
 
 What it does:
 
-- starts Postgres with `docker compose up -d postgres`
+- loads `backend/.env` if present
+- starts Postgres only when `DATABASE_URL` points to Postgres and Docker is available
 - creates `.venv` if needed
 - installs Python dependencies
 - starts `uvicorn` on `0.0.0.0:${PORT:-8000}`
@@ -477,6 +471,8 @@ What it does:
 Recommended VPS flow:
 
 1. Clone the repo.
-2. Create `backend/.env`.
+2. Create `backend/.env` and decide storage mode:
+   - prototype: SQLite + filesystem mode
+   - optional: Postgres + DB mode
 3. Run `./scripts/launch_vps.sh`.
 4. Put Nginx or Caddy in front of `:8000` if you want HTTPS/public access.

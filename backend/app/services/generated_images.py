@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import math
 import mimetypes
 import os
@@ -8,6 +9,7 @@ import re
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import requests
 from sqlalchemy import desc, select
@@ -15,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.models import GeneratedImage, PictureIdea, TrendRun, TrendSignal
+from app.services.filesystem_store import FilesystemStore
 from app.services.influencers import InfluencerService
 
 NOISE_HASHTAGS = {
@@ -41,8 +44,16 @@ class GeneratedImageService:
         self.db = db
         self.settings = settings
         self.influencers = InfluencerService(db=db, settings=settings)
+        self.fs = FilesystemStore(settings=settings)
 
     def list_images(self, influencer_id: str, limit: int = 20) -> list[GeneratedImage]:
+        if self.settings.storage_mode == "filesystem":
+            image_dir = self.fs.influencer_generated_images_dir(influencer_id)
+            records = []
+            for path in sorted(image_dir.glob("generated_*.json"), reverse=True)[:limit]:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                records.append(SimpleNamespace(**payload))
+            return records  # type: ignore[return-value]
         stmt = (
             select(GeneratedImage)
             .where(GeneratedImage.influencer_id == influencer_id)
@@ -111,6 +122,26 @@ class GeneratedImageService:
             image_bytes=image_bytes,
             mime_type=mime_type,
         )
+
+        if self.settings.storage_mode == "filesystem":
+            payload = {
+                "id": int(datetime.now(UTC).timestamp() * 1000),
+                "influencer_id": influencer.influencer_id,
+                "picture_idea_id": picture_idea.id if picture_idea else None,
+                "model": model,
+                "prompt": effective_prompt,
+                "hashtags": selected_hashtags,
+                "reference_image_path": str(ref_path.resolve()),
+                "output_image_path": str(output_path.resolve()),
+                "mime_type": mime_type,
+                "created_at": datetime.now(UTC),
+            }
+            metadata_path = output_path.with_suffix(".json")
+            metadata_path.write_text(
+                json.dumps({**payload, "created_at": payload["created_at"].isoformat()}, ensure_ascii=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            return SimpleNamespace(**payload)  # type: ignore[return-value]
 
         record = GeneratedImage(
             influencer_id=influencer.influencer_id,
@@ -377,7 +408,7 @@ class GeneratedImageService:
     def _save_output(self, *, influencer_id: str, image_bytes: bytes, mime_type: str) -> Path:
         extension = mimetypes.guess_extension(mime_type or "image/png") or ".png"
         stamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
-        output_dir = self.settings.generated_images_data_dir / influencer_id
+        output_dir = self.fs.influencer_generated_images_dir(influencer_id)
         output_dir.mkdir(parents=True, exist_ok=True)
         target = output_dir / f"generated_{stamp}{extension}"
         target.write_bytes(image_bytes)
