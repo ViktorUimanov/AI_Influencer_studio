@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+
+load_dotenv()  # export .env vars into os.environ for os.getenv() callers
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
